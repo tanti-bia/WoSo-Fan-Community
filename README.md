@@ -2,7 +2,7 @@
 Overall functionality
 A social platform focused on women's football where fans can follow teams, share opinions, discuss matches, participate in polls, and predict results.
 1. Pages, explanations, and functionalities
-Page: Home feed
+Page: Home
 Functionalities and features: Posts, announcements, and discussions from followed accounts
 
 Page: Match center

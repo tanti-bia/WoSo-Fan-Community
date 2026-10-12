@@ -1,0 +1,29 @@
+body 
+{
+  background-color: powderblue;
+}
+h1 
+{
+  color: blue;
+}
+p
+{
+  color: red;
+}
+
+.topnav 
+{
+  width: 100%;
+  overflow: auto;
+}
+
+.topnav a 
+{
+  float: left;
+  padding: 12px;
+  color: black;
+  text-decoration: none;
+  font-size: 17px;
+  width: 10%;
+  text-align: center;
+}
