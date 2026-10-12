@@ -1,6 +1,6 @@
 body 
 {
-  background-color: powderblue;
+  background-color: #5ECC91;
 }
 h1 
 {
@@ -11,19 +11,144 @@ p
   color: red;
 }
 
-.topnav 
+.topnav
 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
   width: 100%;
-  overflow: auto;
+  margin-bottom: 16px;
 }
 
-.topnav a 
+.topnav a
 {
-  float: left;
+  box-sizing: border-box;
+  flex: 1 1 120px;
   padding: 12px;
-  color: black;
-  text-decoration: none;
+  border: 1px solid #3d7048;
+  background-color: #e3f0e5;
+  color: #1d3823;
   font-size: 17px;
-  width: 10%;
   text-align: center;
+  text-decoration: none;
+}
+
+.topnav a:hover,
+.topnav a:focus-visible
+{
+  background-color: #c5dec9;
+}
+
+.topnav a.active
+{
+  background-color: #3d7048;
+  color: white;
+}
+
+.auth-card
+{
+  box-sizing: border-box;
+  width: min(100% - 32px, 440px);
+  margin: 48px auto;
+  padding: 32px;
+  border: 1px solid #3d7048;
+  border-radius: 8px;
+  background-color: #f5faf5;
+  color: #1d3823;
+  box-shadow: 0 4px 16px rgb(29 56 35 / 12%);
+}
+
+.auth-card h1
+{
+  margin-bottom: 8px;
+  color: #285536;
+}
+
+.auth-home-link
+{
+  color: #285536;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.auth-intro
+{
+  margin-top: 0;
+  color: #425a47;
+}
+
+.auth-card form
+{
+  display: grid;
+  gap: 10px;
+}
+
+.auth-card label
+{
+  margin-top: 8px;
+  font-weight: bold;
+}
+
+.auth-card input
+{
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #8ca992;
+  border-radius: 4px;
+  font: inherit;
+}
+
+.auth-card input:focus
+{
+  outline: 2px solid #3d7048;
+  outline-offset: 2px;
+}
+
+.auth-button
+{
+  margin-top: 12px;
+  padding: 12px;
+  border: 0;
+  border-radius: 4px;
+  background-color: #3d7048;
+  color: white;
+  cursor: pointer;
+  font: inherit;
+  font-weight: bold;
+}
+
+.auth-button:hover,
+.auth-button:focus-visible
+{
+  background-color: #285536;
+}
+
+.auth-message
+{
+  padding: 10px;
+  border-radius: 4px;
+}
+
+.auth-error
+{
+  background-color: #fbe9e7;
+  color: #8a261d;
+}
+
+.auth-success
+{
+  background-color: #e3f0e5;
+  color: #1d3823;
+}
+
+.auth-register-link
+{
+  margin-bottom: 0;
+  color: #425a47;
+}
+
+.auth-card a
+{
+  color: #285536;
 }
