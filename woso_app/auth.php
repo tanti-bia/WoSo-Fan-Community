@@ -43,6 +43,7 @@ function sign_in_user(array $user): void
 	session_regenerate_id(true);
 	$_SESSION['user_id'] = (int) $user['user_id'];
 	$_SESSION['username'] = (string) $user['username'];
+	$_SESSION['email'] = (string) ($user['email'] ?? '');
 	$_SESSION['role'] = (string) $user['role'];
 }
 
@@ -87,4 +88,9 @@ function require_role(array $allowedRoles): void
 		http_response_code(403);
 		exit('You do not have permission to access this page.');
 	}
+}
+
+function can_access_moderation(): bool
+{
+	return in_array($_SESSION['role'] ?? '', ['Moderator', 'Administrator'], true);
 }

@@ -14,7 +14,7 @@ require_role(['Moderator', 'Administrator']);
 <body>
 	<nav class="topnav" aria-label="Main navigation">
 		<a href="home.html">Home</a>
-		<a href="matches.html">Match Center</a>
+		<a href="matches.php">Match Center</a>
 		<a href="community.html">Community</a>
 		<a href="polls.php">Polls</a>
 	<a href="predictions.php">Predictions</a>

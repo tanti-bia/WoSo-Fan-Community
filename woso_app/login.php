@@ -63,20 +63,31 @@ http_response_code($status);
 <body>
 	<nav class="topnav" aria-label="Main navigation">
 		<a href="home.html">Home</a>
-		<a href="matches.html">Match Center</a>
+		<a href="matches.php">Match Center</a>
 		<a href="community.html">Community</a>
 		<a href="polls.php">Polls</a>
 		<a href="predictions.php">Predictions</a>
 		<a href="notifications.php">Notifications</a>
-		<a href="moderation.php">Moderation</a>
+		<?php if (can_access_moderation()): ?>
+			<a href="moderation.php">Moderation</a>
+		<?php endif; ?>
 		<a class="active" aria-current="page" href="login.php">Account</a>
 	</nav>
 	<main class="auth-card">
 		<a class="auth-home-link" href="home.html">Women's Football Community</a>
-		<?php // Temporarily hide the profile view while keeping its markup for later.
-		if (false): ?>
+		<?php if (isset($_SESSION['user_id'])): ?>
 			<h1>Your account</h1>
-			<p class="auth-intro">Signed in as <strong><?= escape_html((string) $_SESSION['username']) ?></strong> (<?= escape_html((string) $_SESSION['role']) ?>).</p>
+			<p class="auth-intro">You are signed in to your Women's Football Community account.</p>
+			<dl>
+				<dt>Username</dt>
+				<dd><?= escape_html((string) $_SESSION['username']) ?></dd>
+				<?php if (!empty($_SESSION['email'])): ?>
+					<dt>Email address</dt>
+					<dd><?= escape_html((string) $_SESSION['email']) ?></dd>
+				<?php endif; ?>
+				<dt>Account type</dt>
+				<dd><?= escape_html((string) $_SESSION['role']) ?></dd>
+			</dl>
 			<p><a href="home.html">Continue to the community</a></p>
 			<form action="logout.php" method="post">
 				<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
@@ -100,6 +111,8 @@ http_response_code($status);
 				<input id="password" name="password" type="password" autocomplete="current-password" required>
 				<button class="auth-button" type="submit">Sign in</button>
 			</form>
+			<p class="auth-intro">Or sign in with</p>
+			<a class="auth-button google-button" href="google_login.php?redirect=<?= rawurlencode(auth_return_target()) ?>">Continue with Google</a>
 			<p class="auth-register-link">New here? <a href="register.php?redirect=<?= rawurlencode(auth_return_target()) ?>">Create an account</a></p>
 		<?php endif; ?>
 	</main>

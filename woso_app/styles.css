@@ -89,7 +89,8 @@ p
   font-weight: bold;
 }
 
-.auth-card input
+.auth-card input,
+.auth-card select
 {
   box-sizing: border-box;
   width: 100%;
@@ -99,7 +100,8 @@ p
   font: inherit;
 }
 
-.auth-card input:focus
+.auth-card input:focus,
+.auth-card select:focus
 {
   outline: 2px solid #3d7048;
   outline-offset: 2px;
@@ -107,6 +109,7 @@ p
 
 .auth-button
 {
+  display: block;
   margin-top: 12px;
   padding: 12px;
   border: 0;
@@ -116,12 +119,27 @@ p
   cursor: pointer;
   font: inherit;
   font-weight: bold;
+  text-align: center;
+  text-decoration: none;
 }
 
 .auth-button:hover,
 .auth-button:focus-visible
 {
   background-color: #285536;
+}
+
+.google-button
+{
+  background-color: #fff;
+  color: #1d3823;
+  border: 1px solid #8ca992;
+}
+
+.google-button:hover,
+.google-button:focus-visible
+{
+  background-color: #e3f0e5;
 }
 
 .auth-message
@@ -151,4 +169,120 @@ p
 .auth-card a
 {
   color: #285536;
+}
+
+.match-center
+{
+  box-sizing: border-box;
+  width: min(100% - 32px, 960px);
+  margin: 32px auto;
+  color: #1d3823;
+}
+
+.match-center h1,
+.match-center h2
+{
+  color: #285536;
+}
+
+.match-search
+{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  align-items: end;
+  gap: 12px;
+  margin: 24px 0;
+  padding: 16px;
+  border: 1px solid #8ca992;
+  border-radius: 8px;
+  background-color: #f5faf5;
+}
+
+.match-search label
+{
+  display: block;
+  margin-bottom: 6px;
+  font-weight: bold;
+}
+
+.match-search input
+{
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid #8ca992;
+  border-radius: 4px;
+  font: inherit;
+}
+
+.match-search button
+{
+  margin-top: 0;
+}
+
+.match-date-nav
+{
+  display: flex;
+  justify-content: space-between;
+  margin: 16px 0;
+}
+
+.match-date-nav a
+{
+  color: #285536;
+  font-weight: bold;
+}
+
+.match-list
+{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.match-card
+{
+  padding: 16px;
+  border: 1px solid #8ca992;
+  border-radius: 8px;
+  background-color: #f5faf5;
+}
+
+.match-card p
+{
+  margin: 0;
+  color: #1d3823;
+}
+
+.match-league,
+.match-meta
+{
+  font-size: 0.9rem;
+}
+
+.match-teams
+{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 !important;
+  font-weight: bold;
+}
+
+.match-meta
+{
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.match-attribution
+{
+  margin-top: 24px;
+  font-size: 0.85rem;
 }

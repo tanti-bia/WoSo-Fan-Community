@@ -13,12 +13,14 @@ require_signed_in('profile.php');
 <body>
 	<nav class="topnav" aria-label="Main navigation">
 		<a href="home.html">Home</a>
-		<a href="matches.html">Match Center</a>
+		<a href="matches.php">Match Center</a>
 		<a href="community.html">Community</a>
 		<a href="polls.php">Polls</a>
 	<a href="predictions.php">Predictions</a>
 	<a href="notifications.php">Notifications</a>
-	<a href="moderation.php">Moderation</a>
+	<?php if (can_access_moderation()): ?>
+		<a href="moderation.php">Moderation</a>
+	<?php endif; ?>
 	<a href="login.php">Account</a>
 </nav>
 

@@ -1,6 +1,5 @@
 <?php
 require_once __DIR__ . '/auth.php';
-require_signed_in('notifications.php');
 ?>
 <!DOCTYPE html>
 <html>
@@ -13,16 +12,25 @@ require_signed_in('notifications.php');
 <body>
 	<nav class="topnav" aria-label="Main navigation">
 		<a href="home.html">Home</a>
-		<a href="matches.html">Match Center</a>
+		<a href="matches.php">Match Center</a>
 		<a href="community.html">Community</a>
 		<a href="polls.php">Polls</a>
 	<a href="predictions.php">Predictions</a>
 	<a class="active" aria-current="page" href="notifications.php">Notifications</a>
-	<a href="moderation.php">Moderation</a>
+		<?php if (can_access_moderation()): ?>
+			<a href="moderation.php">Moderation</a>
+		<?php endif; ?>
 	<a href="login.php">Account</a>
 </nav>
 
-<img src="https://www.fcbarcelona.com/photo-resources/2026/05/23/ece710a5-9365-48f9-ac6e-05d5e69b17b4/_5DS4138.jpg?width=2400&height=1500" width="50%">
-<p>Welcome to the Women's Football App! This is your one-stop destination for all things related to women's football. Stay updated with the latest matches, join our community discussions, participate in polls, and make predictions on upcoming games. Explore your profile, manage notifications, and engage in moderation activities to help keep our community safe and enjoyable for everyone.</p>
+<main>
+	<h1>Notifications</h1>
+	<?php if (!isset($_SESSION['user_id'])): ?>
+		<p>Sign in to view your notifications.</p>
+		<p><a href="login.php?redirect=notifications.php">Sign in to your account</a></p>
+	<?php else: ?>
+		<p>Your notifications will appear here.</p>
+	<?php endif; ?>
+</main>
 </body>
 </html>
