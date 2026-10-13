@@ -3,7 +3,7 @@ Overall functionality
 A social platform focused on women's football where fans can follow teams, share opinions, discuss matches, participate in polls, and predict results.
 1. Pages, explanations, and functionalities
 Page: Home
-Functionalities and features: Posts, announcements, and discussions from followed accounts
+Functionalities and features: A public feed of community posts with text and photo/video media; signed-in members can publish, like, comment, and repost, while visitors can browse.
 
 Page: Match center
 Functionalities and features: Match details, scores, and a discussion thread
@@ -21,7 +21,7 @@ Page: User profiles
 Functionalities and features: Display favorite teams, posts, and prediction history
 
 Page: Notifications
-Functionalities and features: Notify users about replies, polls, and followed teams
+Functionalities and features: Notify post owners when a user likes, comments on, or reposts their posts
 
 Page: Moderation
 Functionalities and features: Report posts and manage inappropriate content.
@@ -44,8 +44,13 @@ HTML, CSS, JavaScript, Bootstrap, PHP, MySQL, XAMPP, and optionally AJAX for dyn
 
 Table               Main columns
 users               user_id (PK), username, email, password_hash, role
-posts               post_id (PK), user_id (FK), content, created_at, status
-comments            comment_id (PK), post_id (FK), user_id (FK), content, created_at
+posts               post_id (PK), user_id (FK), content, media_path, media_type, created_at, status
+comments            comment_id (PK), post_id (FK), parent_comment_id (FK), user_id (FK), content, media_path, media_type, created_at, status
+post_likes          post_id (FK), user_id (FK), created_at
+post_reposts        repost_id (PK), post_id (FK), user_id (FK), created_at
+comment_likes       comment_id (FK), user_id (FK), created_at
+comment_reposts    repost_id (PK), comment_id (FK), user_id (FK), created_at
+notifications       notification_id (PK), recipient_user_id (FK), actor_user_id (FK), post_id (FK), comment_id (FK), target_comment_id (FK), notification_type, read_at, created_at
 teams               team_id (PK), team_name, country
 user_favorites      user_id (FK), team_id (FK)
 polls               poll_id (PK), created_by (FK), question, end_date
@@ -93,18 +98,73 @@ environment:
    update the `SetEnv` value there.
 5. Save the file and restart Apache in the XAMPP Control Panel so PHP receives
    the configuration.
-6. Open Match Center. Select a date and, optionally, enter a team name to
-   search that day's fixtures, including completed games.
+6. Open Match Center. With no filters, the scrollable match list opens at the
+   earliest live game or nearest upcoming match, followed by other live and
+   upcoming games. Finished games are grouped above that point; scroll up in
+   the list to view them and down to browse later fixtures. The date, team, and
+   competition filters can be used independently or together. Enter one date
+   for a specific day, or fill both date fields for an interval. Select a
+   competition without a date or team to see its available games. To see games
+   for a team across competitions without a date, clear both date fields and
+   enter the team name.
 
-The app makes one API request per selected date and filters the results to the
-configured league IDs; live matches appear first. Responses are cached on the
-server to reduce provider requests. The API plan must cover the competitions
-and dates you want. Keep the API key on the server and never put it in HTML,
-JavaScript, or a public repository.
+A specific-date search makes one API request. Searches without a date and
+date-interval searches use the provider's all-matches-by-league endpoint for
+each configured league unless a competition is selected, in which case it
+requests only that competition. The default page view uses the
+all-matches-by-league endpoint across configured competitions, then fills
+dates after the latest finished match through yesterday and checks dates
+starting today for upcoming matches. This date-based collection fills gaps in
+the league-wide results and selects the nearest live or scheduled match for
+the initial list position. When a date lookup is rate-limited or fails, the
+page continues to use successful cached dates and displays the API error.
+All-matches responses are cached for 24 hours, completed-date responses for
+30 days, today's response for 5 minutes, and future-date responses for 1 hour.
+The API plan must cover the competitions and dates you want. Keep the API key
+on the server and never put it in HTML, JavaScript, or a public repository.
 
-Import `woso_app/database.sql` in phpMyAdmin to set up the account database and
-users table. PHP pages must be served through Apache; opening them directly as
-files does not run the account backend.
+Import `woso_app/database.sql` in phpMyAdmin to set up the account database,
+users table, and community feed tables. If the users table already exists, run
+the `CREATE TABLE IF NOT EXISTS` statements for `posts`, `post_likes`,
+`comments`, `comment_likes`, `comment_reposts`, `post_reposts`, and
+`notifications` from that file. For databases created before comment media,
+nested replies, and unread notification badges were added, first migrate the
+existing `comments` and `notifications` tables:
+
+```sql
+ALTER TABLE comments
+	MODIFY content TEXT NULL,
+	ADD COLUMN parent_comment_id BIGINT UNSIGNED NULL,
+	ADD COLUMN media_path VARCHAR(255) NULL,
+	ADD COLUMN media_type ENUM('image', 'video') NULL,
+	ADD COLUMN status ENUM('published', 'removed') NOT NULL DEFAULT 'published',
+	DROP INDEX comments_post_order,
+	ADD KEY comments_post_order (post_id, parent_comment_id, created_at, comment_id),
+	ADD CONSTRAINT comments_parent_fk
+		FOREIGN KEY (parent_comment_id) REFERENCES comments (comment_id) ON DELETE CASCADE;
+
+ALTER TABLE notifications
+	ADD COLUMN target_comment_id BIGINT UNSIGNED NULL,
+	ADD COLUMN target_type ENUM('post', 'comment') NOT NULL DEFAULT 'post',
+	ADD COLUMN read_at TIMESTAMP NULL,
+	DROP INDEX notifications_recipient_order,
+	ADD KEY notifications_recipient_order (recipient_user_id, read_at, created_at, notification_id),
+	ADD CONSTRAINT notifications_target_comment_fk
+		FOREIGN KEY (target_comment_id) REFERENCES comments (comment_id) ON DELETE CASCADE;
+```
+
+PHP pages must be served through Apache; opening them directly as files does
+not run the account backend.
+Signed-in users can publish text posts and attach one JPEG, PNG, GIF,
+or WebP photo, or one MP4, WebM, or MOV video (up to 25 MB). Uploaded media is
+stored in `woso_app/uploads/posts`; ensure the Apache/PHP account can write to
+this directory. Signed-in users can like and repost posts and comments (both
+can be undone), and add comments or nested replies. Comments support the same
+text/photo/video content as posts. Recent comments, reaction counts, and
+reposts are visible in the public feed. The Home feed shows the latest 50 posts
+and reposts. The menu displays an unread notification badge; opening
+Notifications marks alerts as read. Post owners and comment authors are notified
+about likes, comments/replies, and reposts on their content.
 
 To enable Google sign-in, create a Google OAuth 2.0 Web application client and
 add the exact callback URL

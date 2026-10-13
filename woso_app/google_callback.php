@@ -8,7 +8,7 @@ require_once __DIR__ . '/google_oauth.php';
 $state = isset($_GET['state']) && is_string($_GET['state']) ? $_GET['state'] : '';
 $expectedState = $_SESSION['google_oauth_state'] ?? '';
 $nonce = $_SESSION['google_oauth_nonce'] ?? '';
-$redirect = $_SESSION['google_oauth_redirect'] ?? 'home.html';
+$redirect = $_SESSION['google_oauth_redirect'] ?? 'home.php';
 unset(
 	$_SESSION['google_oauth_state'],
 	$_SESSION['google_oauth_nonce'],
@@ -50,7 +50,7 @@ if (isset($_GET['error'])) {
 
 		$allowedTargets = ['polls.php', 'predictions.php', 'profile.php', 'notifications.php', 'moderation.php'];
 		if (!is_string($redirect) || !in_array($redirect, $allowedTargets, true)) {
-			$redirect = 'home.html';
+			$redirect = 'home.php';
 		}
 		header('Location: ' . $redirect);
 		exit;

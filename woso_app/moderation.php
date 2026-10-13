@@ -18,7 +18,7 @@ require_role(['Moderator', 'Administrator']);
 		<a href="community.html">Community</a>
 		<a href="polls.php">Polls</a>
 	<a href="predictions.php">Predictions</a>
-	<a href="notifications.php">Notifications</a>
+	<?= notifications_nav_link() ?>
 	<a class="active" aria-current="page" href="moderation.php">Moderation</a>
 	<a href="login.php">Account</a>
 </nav>

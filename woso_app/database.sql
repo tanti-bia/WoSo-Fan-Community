@@ -32,3 +32,152 @@ CREATE TABLE IF NOT EXISTS moderator_requests
 ) ENGINE=InnoDB
 	DEFAULT CHARACTER SET utf8mb4
 	COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS posts
+(
+	post_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	user_id INT UNSIGNED NOT NULL,
+	content TEXT NULL,
+	media_path VARCHAR(255) NULL,
+	media_type ENUM('image', 'video') NULL,
+	status ENUM('published', 'removed') NOT NULL DEFAULT 'published',
+	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (post_id),
+	KEY posts_feed_order (status, created_at, post_id),
+	CONSTRAINT posts_user_fk
+		FOREIGN KEY (user_id) REFERENCES users (user_id)
+		ON DELETE CASCADE
+) ENGINE=InnoDB
+	DEFAULT CHARACTER SET utf8mb4
+	COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS post_likes
+(
+	post_id BIGINT UNSIGNED NOT NULL,
+	user_id INT UNSIGNED NOT NULL,
+	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (post_id, user_id),
+	KEY post_likes_user (user_id, post_id),
+	CONSTRAINT post_likes_post_fk
+		FOREIGN KEY (post_id) REFERENCES posts (post_id)
+		ON DELETE CASCADE,
+	CONSTRAINT post_likes_user_fk
+		FOREIGN KEY (user_id) REFERENCES users (user_id)
+		ON DELETE CASCADE
+) ENGINE=InnoDB
+	DEFAULT CHARACTER SET utf8mb4
+	COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS comments
+(
+	comment_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	post_id BIGINT UNSIGNED NOT NULL,
+	user_id INT UNSIGNED NOT NULL,
+	parent_comment_id BIGINT UNSIGNED NULL,
+	content TEXT NULL,
+	media_path VARCHAR(255) NULL,
+	media_type ENUM('image', 'video') NULL,
+	status ENUM('published', 'removed') NOT NULL DEFAULT 'published',
+	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (comment_id),
+	KEY comments_post_order (post_id, parent_comment_id, created_at, comment_id),
+	CONSTRAINT comments_post_fk
+		FOREIGN KEY (post_id) REFERENCES posts (post_id)
+		ON DELETE CASCADE,
+	CONSTRAINT comments_parent_fk
+		FOREIGN KEY (parent_comment_id) REFERENCES comments (comment_id)
+		ON DELETE CASCADE,
+	CONSTRAINT comments_user_fk
+		FOREIGN KEY (user_id) REFERENCES users (user_id)
+		ON DELETE CASCADE
+) ENGINE=InnoDB
+	DEFAULT CHARACTER SET utf8mb4
+	COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS comment_likes
+(
+	comment_id BIGINT UNSIGNED NOT NULL,
+	user_id INT UNSIGNED NOT NULL,
+	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (comment_id, user_id),
+	KEY comment_likes_user (user_id, comment_id),
+	CONSTRAINT comment_likes_comment_fk
+		FOREIGN KEY (comment_id) REFERENCES comments (comment_id)
+		ON DELETE CASCADE,
+	CONSTRAINT comment_likes_user_fk
+		FOREIGN KEY (user_id) REFERENCES users (user_id)
+		ON DELETE CASCADE
+) ENGINE=InnoDB
+	DEFAULT CHARACTER SET utf8mb4
+	COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS comment_reposts
+(
+	repost_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	comment_id BIGINT UNSIGNED NOT NULL,
+	user_id INT UNSIGNED NOT NULL,
+	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (repost_id),
+	UNIQUE KEY comment_reposts_unique (comment_id, user_id),
+	KEY comment_reposts_feed (created_at, repost_id),
+	CONSTRAINT comment_reposts_comment_fk
+		FOREIGN KEY (comment_id) REFERENCES comments (comment_id)
+		ON DELETE CASCADE,
+	CONSTRAINT comment_reposts_user_fk
+		FOREIGN KEY (user_id) REFERENCES users (user_id)
+		ON DELETE CASCADE
+) ENGINE=InnoDB
+	DEFAULT CHARACTER SET utf8mb4
+	COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS post_reposts
+(
+	repost_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	post_id BIGINT UNSIGNED NOT NULL,
+	user_id INT UNSIGNED NOT NULL,
+	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (repost_id),
+	UNIQUE KEY post_reposts_unique (post_id, user_id),
+	KEY post_reposts_feed (created_at, repost_id),
+	CONSTRAINT post_reposts_post_fk
+		FOREIGN KEY (post_id) REFERENCES posts (post_id)
+		ON DELETE CASCADE,
+	CONSTRAINT post_reposts_user_fk
+		FOREIGN KEY (user_id) REFERENCES users (user_id)
+		ON DELETE CASCADE
+) ENGINE=InnoDB
+	DEFAULT CHARACTER SET utf8mb4
+	COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS notifications
+(
+	notification_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	recipient_user_id INT UNSIGNED NOT NULL,
+	actor_user_id INT UNSIGNED NOT NULL,
+	post_id BIGINT UNSIGNED NOT NULL,
+	comment_id BIGINT UNSIGNED NULL,
+	target_comment_id BIGINT UNSIGNED NULL,
+	target_type ENUM('post', 'comment') NOT NULL DEFAULT 'post',
+	notification_type ENUM('like', 'comment', 'repost') NOT NULL,
+	read_at TIMESTAMP NULL,
+	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (notification_id),
+	KEY notifications_recipient_order (recipient_user_id, read_at, created_at, notification_id),
+	CONSTRAINT notifications_recipient_fk
+		FOREIGN KEY (recipient_user_id) REFERENCES users (user_id)
+		ON DELETE CASCADE,
+	CONSTRAINT notifications_actor_fk
+		FOREIGN KEY (actor_user_id) REFERENCES users (user_id)
+		ON DELETE CASCADE,
+	CONSTRAINT notifications_post_fk
+		FOREIGN KEY (post_id) REFERENCES posts (post_id)
+		ON DELETE CASCADE,
+	CONSTRAINT notifications_comment_fk
+		FOREIGN KEY (comment_id) REFERENCES comments (comment_id)
+		ON DELETE CASCADE,
+	CONSTRAINT notifications_target_comment_fk
+		FOREIGN KEY (target_comment_id) REFERENCES comments (comment_id)
+		ON DELETE CASCADE
+) ENGINE=InnoDB
+	DEFAULT CHARACTER SET utf8mb4
+	COLLATE utf8mb4_unicode_ci;

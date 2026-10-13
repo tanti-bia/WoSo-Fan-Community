@@ -60,7 +60,7 @@ function auth_return_target(): string
 		'moderation.php',
 	];
 
-	return in_array($target, $allowedTargets, true) ? $target : 'home.html';
+	return in_array($target, $allowedTargets, true) ? $target : 'home.php';
 }
 
 function require_signed_in(string $target): void
@@ -76,7 +76,7 @@ function require_signed_in(string $target): void
 		'notifications.php',
 		'moderation.php',
 	];
-	$returnTarget = in_array($target, $allowedTargets, true) ? $target : 'home.html';
+	$returnTarget = in_array($target, $allowedTargets, true) ? $target : 'home.php';
 
 	header('Location: login.php?redirect=' . rawurlencode($returnTarget));
 	exit;
@@ -93,4 +93,41 @@ function require_role(array $allowedRoles): void
 function can_access_moderation(): bool
 {
 	return in_array($_SESSION['role'] ?? '', ['Moderator', 'Administrator'], true);
+}
+
+function notifications_nav_link(bool $active = false): string
+{
+	$count = null;
+	$countAvailable = true;
+	if (isset($_SESSION['user_id'])) {
+		require_once __DIR__ . '/database.php';
+		try {
+			$database = database_connection();
+			$query = $database->prepare(
+				'SELECT COUNT(*) FROM notifications
+				WHERE recipient_user_id = :user_id AND read_at IS NULL'
+			);
+			$query->execute(['user_id' => (int) $_SESSION['user_id']]);
+			$count = (int) $query->fetchColumn();
+		} catch (PDOException $exception) {
+			error_log('WoSo notification badge database error: ' . $exception->getMessage());
+			$countAvailable = false;
+		}
+	}
+
+	$label = 'Notifications';
+	$badge = '';
+	if ($count !== null && $count > 0) {
+		$displayCount = $count > 99 ? '99+' : (string) $count;
+		$badge = '<span class="notification-badge" aria-label="' . escape_html($count . ' new notifications') . '">'
+			. escape_html($displayCount) . '</span>';
+		$label .= ' (' . $count . ' new)';
+	} elseif (!$countAvailable) {
+		$badge = '<span class="notification-badge is-unavailable" aria-label="Notification count unavailable">!</span>';
+		$label .= ' (count unavailable)';
+	}
+
+	return '<a class="notification-nav-link' . ($active ? ' active' : '') . '"'
+		. ($active ? ' aria-current="page"' : '')
+		. ' href="notifications.php">' . escape_html($label) . $badge . '</a>';
 }
