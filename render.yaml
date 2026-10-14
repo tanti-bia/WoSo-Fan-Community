@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: woso-fan-community
+    runtime: docker
+    plan: starter
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    disk:
+      name: woso-uploads
+      mountPath: /var/www/html/uploads
+      sizeGB: 1
+    envVars:
+      - key: WOSO_DB_HOST
+        sync: false
+      - key: WOSO_DB_PORT
+        value: "3306"
+      - key: WOSO_DB_NAME
+        sync: false
+      - key: WOSO_DB_USER
+        sync: false
+      - key: WOSO_DB_PASSWORD
+        sync: false

@@ -828,6 +828,39 @@ p
   color: #1d3823;
 }
 
+.match-unavailable-page
+{
+  box-sizing: border-box;
+  width: min(100% - 32px, 760px);
+  margin: 40px auto;
+  color: #1d3823;
+}
+
+.match-unavailable-card
+{
+  padding: 28px;
+  border: 1px solid #8ca992;
+  border-radius: 12px;
+  background-color: #f5faf5;
+  box-shadow: 0 4px 16px rgb(29 56 35 / 8%);
+}
+
+.match-unavailable-card h1
+{
+  color: #285536;
+}
+
+.match-unavailable-card p
+{
+  color: #425a47;
+}
+
+.match-unavailable-card a
+{
+  color: #285536;
+  font-weight: bold;
+}
+
 .notifications-page .home-heading
 {
   margin-bottom: 20px;

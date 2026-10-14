@@ -38,7 +38,7 @@ Administrator: Manage accounts, permissions, and platform settings
 
 3. Required technologies
 
-HTML, CSS, JavaScript, Bootstrap, PHP, MySQL, XAMPP, and optionally AJAX for dynamic interactions.
+HTML, CSS, JavaScript, PHP, MySQL/MariaDB, and optionally AJAX for dynamic interactions. XAMPP is optional for local development.
 
 4. Database structure
 
@@ -59,69 +59,60 @@ votes               vote_id (PK), poll_id (FK), option_id (FK), user_id (FK)
 predictions         prediction_id (PK), match_id (FK), user_id (FK), predicted_home_score, predicted_away_score
 reports             report_id (PK), reporter_id (FK), post_id (FK), reason, status
 
-5. Running the app locally
+5. Deploying to Render
 
-With XAMPP, copy this repository into `C:\xampp\htdocs\WoSo-Fan-Community`,
-start Apache and MySQL, then open
-`http://localhost/WoSo-Fan-Community/`. The project opens the app on Home.
-Home, Match Center, and Community are available to visitors. Polls, Predictions,
-and Notifications are viewable while signed out; visitors can browse Polls and
-Predictions but must sign in to participate. Notifications tell visitors to sign
-in to view them. Profile requires an account, and Moderation requires a Moderator
-or Administrator account. The Account page shows the sign-in form to visitors and
-account details to signed-in users.
+Render can run this PHP app using the repository's Dockerfile and Blueprint
+(`render.yaml`). The Blueprint creates a paid Starter web service and a
+1 GB persistent disk for uploaded media. Render's managed relational database
+is PostgreSQL, but this application currently requires MySQL/MariaDB; create a
+MySQL database with an external provider before deploying.
 
-The Match Center retrieves fixtures from the RapidAPI listing [Free API Live
-Football Data](https://rapidapi.com/Creativesdev/api/free-api-live-football-data).
-Configure `WOSO_RAPIDAPI_KEY` and `WOSO_RAPIDAPI_LEAGUE_IDS` in Apache's PHP
-environment:
+1. Push the repository to a GitHub repository connected to Render.
+2. Create a MySQL 8.0 or MariaDB 10.5+ database named `woso_community` with an
+   externally reachable host, username, and password. Allow connections from
+   Render as required by your database provider. Use TLS if the provider
+   supports it.
+3. In Render, choose **New > Blueprint**, select the repository, and apply
+   `render.yaml`. When prompted, provide `WOSO_DB_HOST`, `WOSO_DB_NAME`,
+   `WOSO_DB_USER`, and `WOSO_DB_PASSWORD`. `WOSO_DB_PORT` defaults to `3306`;
+   change it if your provider uses another port. Never commit database
+   credentials to this repository.
+4. Create the app schema by importing `woso_app/database.sql` into the hosted
+   MySQL database. If migrating an existing community, export its local
+   database and import the backup instead of importing a blank schema.
+5. Wait for the Render build and deploy to finish, then open the service's
+   `onrender.com` HTTPS URL. The app can then be opened from any laptop with a
+   browser; users do not need XAMPP.
+6. The Blueprint mounts persistent storage at `/var/www/html/uploads`. If
+   migrating existing posts, transfer the files in `woso_app/uploads/posts`
+   into the mounted disk's `posts` directory as well as importing the database;
+   uploaded media is not included in the Docker image. Keep future database
+   backups and media backups independently.
+7. To enable Google sign-in, configure `WOSO_GOOGLE_CLIENT_ID`,
+   `WOSO_GOOGLE_CLIENT_SECRET`, and `WOSO_GOOGLE_REDIRECT_URI` as Render
+   environment variables. Add the HTTPS callback URL
+   `https://<your-render-domain>/google_callback.php` to the OAuth client's
+   authorized redirect URIs. Keep the client secret private.
 
-1. Sign in to RapidAPI, open the linked API, and subscribe to a plan.
-2. Copy the `x-rapidapi-key` value from that API's code snippet.
-3. In RapidAPI's Test Endpoint, call `football-get-matches-by-date-and-league`
-   with a date in `YYYYMMDD` format. In the response, find women's competitions
-   and note each group's `id`. The current Match Center configuration uses:
-   WSL 9227, Liga F 9907, Frauen-Bundesliga 9676, Première Ligue Féminine
-   9677, A-League Women 9495, Women's Premier Division 10210, USL Super League
-   Women 10699, Women's Champions League 9375, Women's World Cup 76, Women's
-   EURO 292, Women's Nations League A 10457, FA Cup (Women) 10082, Women's
-   League Cup 9717, and DFB Pokal Frauen 10650.
-4. In `C:\xampp\apache\conf\httpd.conf`, set the API key and league IDs:
+The container installs PHP 8.4 with PDO MySQL and verifies the built-in
+Fileinfo extension; it sets upload limits above the app's 25 MB per-file limit.
+If your database
+provider requires a CA certificate for TLS, set `WOSO_DB_SSL_CA` to the
+certificate's path in the running service; the connection verifies the server
+certificate when PHP exposes that option. The service has one persistent disk
+and therefore runs as a single instance. Render disk-backed services can have
+brief downtime during deployments.
 
-   ```apache
-   SetEnv WOSO_RAPIDAPI_KEY "paste_your_rapidapi_key_here"
-   SetEnv WOSO_RAPIDAPI_LEAGUE_IDS "9227,9907,9676,9677,9495,10210,10699,9375,76,292,10457,10082,9717,10650"
-   ```
+For local XAMPP development, import the SQL schema in phpMyAdmin, copy the
+repository into `C:\xampp\htdocs\WoSo-Fan-Community`, start Apache and MySQL,
+and open `http://localhost/WoSo-Fan-Community/`. Local XAMPP defaults are for
+development only.
 
-   The key provided for this setup has been added to the local Apache
-   configuration; it is not stored in this repository. If you replace the key,
-   update the `SetEnv` value there.
-5. Save the file and restart Apache in the XAMPP Control Panel so PHP receives
-   the configuration.
-6. Open Match Center. With no filters, the scrollable match list opens at the
-   earliest live game or nearest upcoming match, followed by other live and
-   upcoming games. Finished games are grouped above that point; scroll up in
-   the list to view them and down to browse later fixtures. The date, team, and
-   competition filters can be used independently or together. Enter one date
-   for a specific day, or fill both date fields for an interval. Select a
-   competition without a date or team to see its available games. To see games
-   for a team across competitions without a date, clear both date fields and
-   enter the team name.
-
-A specific-date search makes one API request. Searches without a date and
-date-interval searches use the provider's all-matches-by-league endpoint for
-each configured league unless a competition is selected, in which case it
-requests only that competition. The default page view uses the
-all-matches-by-league endpoint across configured competitions, then fills
-dates after the latest finished match through yesterday and checks dates
-starting today for upcoming matches. This date-based collection fills gaps in
-the league-wide results and selects the nearest live or scheduled match for
-the initial list position. When a date lookup is rate-limited or fails, the
-page continues to use successful cached dates and displays the API error.
-All-matches responses are cached for 24 hours, completed-date responses for
-30 days, today's response for 5 minutes, and future-date responses for 1 hour.
-The API plan must cover the competitions and dates you want. Keep the API key
-on the server and never put it in HTML, JavaScript, or a public repository.
+Home and Community are available to visitors. The Match Center is currently
+unavailable. Polls, Predictions, and Notifications are viewable while signed
+out; visitors can browse Polls and Predictions but must sign in to participate.
+Profile requires an account, and Moderation requires a Moderator or
+Administrator account.
 
 Import `woso_app/database.sql` in phpMyAdmin to set up the account database,
 users table, and community feed tables. If the users table already exists, run
@@ -153,12 +144,13 @@ ALTER TABLE notifications
 		FOREIGN KEY (target_comment_id) REFERENCES comments (comment_id) ON DELETE CASCADE;
 ```
 
-PHP pages must be served through Apache; opening them directly as files does
-not run the account backend.
+PHP pages must be served through a PHP-enabled web server; opening them
+directly as files does not run the account backend.
 Signed-in users can publish text posts and attach one JPEG, PNG, GIF,
 or WebP photo, or one MP4, WebM, or MOV video (up to 25 MB). Uploaded media is
-stored in `woso_app/uploads/posts`; ensure the Apache/PHP account can write to
-this directory. Signed-in users can like and repost posts and comments (both
+stored in `woso_app/uploads/posts` (or `uploads/posts` when deployed at the
+site document root); ensure the PHP account can write to this directory.
+Signed-in users can like and repost posts and comments (both
 can be undone), and add comments or nested replies. Comments support the same
 text/photo/video content as posts. Recent comments, reaction counts, and
 reposts are visible in the public feed. The Home feed shows the latest 50 posts
@@ -167,15 +159,15 @@ Notifications marks alerts as read. Post owners and comment authors are notified
 about likes, comments/replies, and reposts on their content.
 
 To enable Google sign-in, create a Google OAuth 2.0 Web application client and
-add the exact callback URL
-`http://localhost/WoSo-Fan-Community/woso_app/google_callback.php` to its
-authorized redirect URIs for local development. Configure
+add the callback URL for the environment to its authorized redirect URIs. For
+local XAMPP development, use
+`http://localhost/WoSo-Fan-Community/woso_app/google_callback.php`. For the
+hosted site, use its HTTPS URL, for example
+`https://example.com/google_callback.php`. Set
 `WOSO_GOOGLE_CLIENT_ID`, `WOSO_GOOGLE_CLIENT_SECRET`, and
-`WOSO_GOOGLE_REDIRECT_URI` in Apache's PHP environment, using that callback URL
-for `WOSO_GOOGLE_REDIRECT_URI`. For deployment, use the HTTPS callback URL for
-your site and keep the client secret private. Google sign-in creates new Member
-accounts and can link an existing account only when Google confirms the same
-email address.
+`WOSO_GOOGLE_REDIRECT_URI` in the PHP environment on the host. Keep the client
+secret private. Google sign-in creates new Member accounts and can link an
+existing account only when Google confirms the same email address.
 
 For an existing database, add the Google account identifier column before using
 Google sign-in:
