@@ -15,7 +15,7 @@ function render_comment(
 	?>
 	<article class="comment-card<?= $depth > 0 ? ' comment-reply' : '' ?>" id="comment-<?= $commentId ?>" style="--comment-depth: <?= min($depth, 5) ?>">
 		<header class="post-author">
-			<strong><?= escape_html((string) $comment['username']) ?></strong>
+			<strong><a class="profile-link" href="home.php?user_id=<?= (int) $comment['user_id'] ?>"><?= escape_html((string) $comment['username']) ?></a></strong>
 			<time datetime="<?= escape_html((string) $comment['created_at']) ?>"><?= escape_html(date('M j, Y \a\t g:i a', strtotime((string) $comment['created_at']))) ?></time>
 		</header>
 		<?php if (is_string($comment['content']) && $comment['content'] !== ''): ?>

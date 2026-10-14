@@ -563,10 +563,22 @@ p
 }
 
 .visitor-prompt a,
-.post-author span
+.post-author span,
+.profile-link
 {
   color: #285536;
   font-weight: bold;
+}
+
+.profile-link
+{
+  text-decoration: none;
+}
+
+.profile-link:hover,
+.profile-link:focus-visible
+{
+  text-decoration: underline;
 }
 
 .home-feed-heading
@@ -588,6 +600,30 @@ p
 .post-card
 {
   min-width: 0;
+}
+
+.post-card.is-openable
+{
+  cursor: pointer;
+}
+
+.post-card.is-openable:focus-visible
+{
+  outline: 3px solid #3d7048;
+  outline-offset: 3px;
+}
+
+.post-card.is-openable a
+{
+  cursor: pointer;
+}
+
+.post-card.is-openable button,
+.post-card.is-openable input,
+.post-card.is-openable textarea,
+.post-card.is-openable select
+{
+  cursor: auto;
 }
 
 .post-author
@@ -618,6 +654,11 @@ p
   color: #1d3823;
   line-height: 1.6;
   overflow-wrap: anywhere;
+}
+
+.post-open-content
+{
+  display: block;
 }
 
 .post-interactions
@@ -764,9 +805,12 @@ p
 .post-media
 {
   display: block;
-  max-width: 100%;
-  max-height: 600px;
+  width: auto;
+  height: auto;
+  max-width: min(100%, 480px);
+  max-height: 360px;
   margin: 16px auto 0;
+  object-fit: contain;
   border-radius: 6px;
 }
 

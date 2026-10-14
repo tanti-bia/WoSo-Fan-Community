@@ -200,5 +200,18 @@ try {
 
 $_SESSION['home_notice'] = $notice;
 $anchor = $redirectCommentId === null ? 'post-' . $postId : 'comment-' . $redirectCommentId;
-header('Location: home.php#' . $anchor, true, 303);
+$returnPostIdInput = $_GET['post_id'] ?? null;
+$returnPostId = is_string($returnPostIdInput) && ctype_digit($returnPostIdInput)
+	? filter_var($returnPostIdInput, FILTER_VALIDATE_INT)
+	: false;
+$returnUserIdInput = $_GET['user_id'] ?? null;
+$returnUserId = is_string($returnUserIdInput) && ctype_digit($returnUserIdInput)
+	? filter_var($returnUserIdInput, FILTER_VALIDATE_INT)
+	: false;
+$returnTarget = is_int($returnPostId) && $returnPostId > 0
+	? 'home.php?post_id=' . $returnPostId
+	: (is_int($returnUserId) && $returnUserId > 0
+	? 'home.php?user_id=' . $returnUserId
+	: 'home.php');
+header('Location: ' . $returnTarget . '#' . $anchor, true, 303);
 exit;

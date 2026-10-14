@@ -3,7 +3,7 @@ Overall functionality
 A social platform focused on women's football where fans can follow teams, share opinions, discuss matches, participate in polls, and predict results.
 1. Pages, explanations, and functionalities
 Page: Home
-Functionalities and features: A public feed of community posts with text and photo/video media; signed-in members can publish, like, comment, and repost, while visitors can browse.
+Functionalities and features: A public feed of community posts with text and photo/video media; the feed shows comment counts, and opening a post shows its comments. Signed-in members can publish, like, comment, and repost, while visitors can browse.
 
 Page: Match center
 Functionalities and features: Match details, scores, and a discussion thread
@@ -18,8 +18,8 @@ Page: Predictions
 Functionalities and features: Submit score predictions before matches and earn points
 
 Page: User profiles
-Functionalities and features: Display favorite teams, posts, and prediction history
-
+Functionalities and features: Click a username on a post or comment to view that
+member's published posts; display favorite teams and prediction history
 Page: Notifications
 Functionalities and features: Notify post owners when a user likes, comments on, or reposts their posts
 

@@ -12,6 +12,49 @@ $error = '';
 $status = 200;
 $isSignedIn = isset($_SESSION['user_id']);
 $posts = [];
+$interactionStats = [];
+$likedPostIds = [];
+$repostedPostIds = [];
+$commentsByPost = [];
+$repliesByParent = [];
+$commentStats = [];
+$likedCommentIds = [];
+$repostedCommentIds = [];
+$profileViewRequested = array_key_exists('user_id', $_GET);
+$profileUserId = null;
+$profileUser = null;
+$profileRedirect = '';
+$postViewRequested = array_key_exists('post_id', $_GET);
+$postViewId = null;
+$postRedirect = '';
+
+if ($profileViewRequested) {
+	$userIdInput = $_GET['user_id'];
+	$validatedUserId = is_string($userIdInput) && ctype_digit($userIdInput)
+		? filter_var($userIdInput, FILTER_VALIDATE_INT)
+		: false;
+	if (!is_int($validatedUserId) || $validatedUserId < 1) {
+		$error = 'Choose a valid account.';
+		$status = 400;
+	} else {
+		$profileUserId = $validatedUserId;
+		$profileRedirect = '?user_id=' . $profileUserId;
+	}
+}
+
+if ($postViewRequested) {
+	$postIdInput = $_GET['post_id'];
+	$validatedPostId = is_string($postIdInput) && ctype_digit($postIdInput)
+		? filter_var($postIdInput, FILTER_VALIDATE_INT)
+		: false;
+	if (!is_int($validatedPostId) || $validatedPostId < 1) {
+		$error = 'Choose a valid post.';
+		$status = 400;
+	} else {
+		$postViewId = $validatedPostId;
+		$postRedirect = '?post_id=' . $postViewId;
+	}
+}
 
 if (isset($_SESSION['home_notice']) && is_string($_SESSION['home_notice'])) {
 	$notice = $_SESSION['home_notice'];
@@ -170,7 +213,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 						$database->commit();
 						$_SESSION['home_notice'] = $notice;
-						header('Location: home.php#post-' . $postId, true, 303);
+						header('Location: home.php' . ($postRedirect !== '' ? $postRedirect : $profileRedirect) . '#post-' . $postId, true, 303);
 						exit;
 					}
 				} catch (PDOException $exception) {
@@ -299,43 +342,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 try {
 	$database = database_connection();
-	$statement = $database->query(
-		'SELECT feed_items.feed_item_id, feed_items.feed_type, feed_items.feed_created_at,
-			feed_items.reposter_username, posts.post_id, posts.content, posts.media_path,
-			posts.media_type, posts.created_at, users.user_id, users.username
-		FROM (
-			SELECT posts.post_id AS feed_item_id, \'post\' AS feed_type,
-				posts.created_at AS feed_created_at, NULL AS reposter_username, posts.post_id
+	if ($postViewRequested && $postViewId !== null) {
+		$statement = $database->prepare(
+			'SELECT posts.post_id AS feed_item_id, \'post\' AS feed_type,
+				posts.created_at AS feed_created_at, NULL AS reposter_username,
+				NULL AS reposter_user_id, posts.post_id, posts.content, posts.media_path,
+				posts.media_type, posts.created_at, users.user_id, users.username
 			FROM posts
-			WHERE posts.status = \'published\'
-			UNION ALL
-			SELECT post_reposts.repost_id AS feed_item_id, \'repost\' AS feed_type,
-				post_reposts.created_at AS feed_created_at, reposting_users.username AS reposter_username,
-				post_reposts.post_id
-			FROM post_reposts
-			INNER JOIN posts ON posts.post_id = post_reposts.post_id
-			INNER JOIN users AS reposting_users ON reposting_users.user_id = post_reposts.user_id
-			WHERE posts.status = \'published\'
-		) AS feed_items
-		INNER JOIN posts ON posts.post_id = feed_items.post_id
-		INNER JOIN users ON users.user_id = posts.user_id
-		ORDER BY feed_items.feed_created_at DESC, feed_items.feed_item_id DESC
-		LIMIT 50'
-	);
-	$posts = $statement->fetchAll();
+			INNER JOIN users ON users.user_id = posts.user_id
+			WHERE posts.status = \'published\' AND posts.post_id = :post_id'
+		);
+		$statement->execute(['post_id' => $postViewId]);
+		$posts = $statement->fetchAll();
+		if ($posts === []) {
+			$error = 'That post could not be found.';
+			$status = 404;
+		}
+	}
 
+	if ($profileViewRequested && $profileUserId !== null) {
+		$profileQuery = $database->prepare(
+			'SELECT user_id, username FROM users WHERE user_id = :user_id'
+		);
+		$profileQuery->execute(['user_id' => $profileUserId]);
+		$profileUser = $profileQuery->fetch() ?: null;
+		if ($profileUser === null) {
+			$error = 'That account could not be found.';
+			$status = 404;
+		} else {
+			$statement = $database->prepare(
+				'SELECT posts.post_id AS feed_item_id, \'post\' AS feed_type,
+					posts.created_at AS feed_created_at, NULL AS reposter_username,
+					NULL AS reposter_user_id, posts.post_id, posts.content, posts.media_path,
+					posts.media_type, posts.created_at, users.user_id, users.username
+				FROM posts
+				INNER JOIN users ON users.user_id = posts.user_id
+				WHERE posts.status = \'published\' AND posts.user_id = :user_id
+				ORDER BY posts.created_at DESC, posts.post_id DESC'
+			);
+			$statement->execute(['user_id' => $profileUserId]);
+			$posts = $statement->fetchAll();
+		}
+	}
+
+	if (!$profileViewRequested && !$postViewRequested) {
+		$statement = $database->query(
+			'SELECT feed_items.feed_item_id, feed_items.feed_type, feed_items.feed_created_at,
+				feed_items.reposter_username, feed_items.reposter_user_id,
+				posts.post_id, posts.content, posts.media_path, posts.media_type,
+				posts.created_at, users.user_id, users.username
+			FROM (
+				SELECT posts.post_id AS feed_item_id, \'post\' AS feed_type,
+					posts.created_at AS feed_created_at, NULL AS reposter_username,
+					NULL AS reposter_user_id, posts.post_id
+				FROM posts
+				WHERE posts.status = \'published\'
+				UNION ALL
+				SELECT post_reposts.repost_id AS feed_item_id, \'repost\' AS feed_type,
+					post_reposts.created_at AS feed_created_at, reposting_users.username AS reposter_username,
+					post_reposts.user_id AS reposter_user_id, post_reposts.post_id
+				FROM post_reposts
+				INNER JOIN posts ON posts.post_id = post_reposts.post_id
+				INNER JOIN users AS reposting_users ON reposting_users.user_id = post_reposts.user_id
+				WHERE posts.status = \'published\'
+			) AS feed_items
+			INNER JOIN posts ON posts.post_id = feed_items.post_id
+			INNER JOIN users ON users.user_id = posts.user_id
+			ORDER BY feed_items.feed_created_at DESC, feed_items.feed_item_id DESC
+			LIMIT 50'
+		);
+		$posts = $statement->fetchAll();
+	}
 	$postIds = array_values(array_unique(array_map(
 		static fn (array $post): int => (int) $post['post_id'],
 		$posts
 	)));
-	$interactionStats = [];
-	$likedPostIds = [];
-	$repostedPostIds = [];
-	$commentsByPost = [];
-	$repliesByParent = [];
-	$commentStats = [];
-	$likedCommentIds = [];
-	$repostedCommentIds = [];
 	if ($postIds !== []) {
 		$placeholders = implode(',', array_fill(0, count($postIds), '?'));
 		$statsQuery = $database->prepare(
@@ -367,15 +448,12 @@ try {
 			$repostedPostIds = array_fill_keys(array_map('intval', $repostedQuery->fetchAll(PDO::FETCH_COLUMN)), true);
 		}
 
+		if ($postViewRequested && $posts !== []) {
 		$commentsQuery = $database->prepare(
 			'WITH RECURSIVE recent_roots AS (
 				SELECT comments.comment_id, comments.post_id, comments.parent_comment_id,
 					comments.user_id, comments.content, comments.media_path, comments.media_type,
-					comments.created_at, users.username,
-					ROW_NUMBER() OVER (
-						PARTITION BY comments.post_id
-						ORDER BY comments.created_at DESC, comments.comment_id DESC
-					) AS comment_rank
+					comments.created_at, users.username
 				FROM comments
 				INNER JOIN users ON users.user_id = comments.user_id
 				WHERE comments.post_id IN (' . $placeholders . ')
@@ -387,7 +465,6 @@ try {
 					recent_roots.user_id, recent_roots.content, recent_roots.media_path, recent_roots.media_type,
 					recent_roots.created_at, recent_roots.username, 0 AS depth
 				FROM recent_roots
-				WHERE recent_roots.comment_rank <= 5
 				UNION ALL
 				SELECT replies.comment_id, replies.post_id, replies.parent_comment_id,
 					replies.user_id, replies.content, replies.media_path, replies.media_type,
@@ -442,6 +519,7 @@ try {
 				$repostedCommentIds = array_fill_keys(array_map('intval', $repostedCommentsQuery->fetchAll(PDO::FETCH_COLUMN)), true);
 			}
 		}
+		}
 	}
 } catch (PDOException $exception) {
 	error_log('WoSo home feed database error: ' . $exception->getMessage());
@@ -456,7 +534,7 @@ http_response_code($status);
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>Women's Football - Home</title>
+	<title><?= $profileUser !== null ? escape_html((string) $profileUser['username']) . ' - Posts' : 'Women\'s Football - Home' ?></title>
 	<link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -475,8 +553,14 @@ http_response_code($status);
 	<main class="home-page">
 		<header class="home-heading">
 			<p class="home-eyebrow">A community for the beautiful game</p>
-			<h1>Women's Football Community</h1>
+			<h1><?= $postViewRequested && $posts !== [] ? 'Post by @' . escape_html((string) $posts[0]['username']) : ($profileUser !== null ? 'Posts by @' . escape_html((string) $profileUser['username']) : 'Women\'s Football Community') ?></h1>
+			<?php if ($postViewRequested): ?>
+				<p><a href="<?= $profileUser !== null ? 'home.php?user_id=' . (int) $profileUser['user_id'] : ($posts !== [] ? 'home.php?user_id=' . (int) $posts[0]['user_id'] : 'home.php') ?>">Back to posts</a></p>
+			<?php elseif ($profileUser !== null): ?>
+				<p><a href="home.php">Back to the community feed</a></p>
+			<?php else: ?>
 			<p>Share the moments, matches, and conversations you love with fans everywhere.</p>
+			<?php endif; ?>
 		</header>
 
 		<?php if ($error !== ''): ?>
@@ -486,7 +570,7 @@ http_response_code($status);
 			<p class="auth-message auth-success" role="status"><?= escape_html($notice) ?></p>
 		<?php endif; ?>
 
-		<?php if ($isSignedIn): ?>
+		<?php if ($isSignedIn && !$profileViewRequested && !$postViewRequested): ?>
 			<section class="post-composer" aria-labelledby="composer-heading">
 				<h2 id="composer-heading">What's on your mind, <?= escape_html((string) $_SESSION['username']) ?>?</h2>
 				<form action="home.php" method="post" enctype="multipart/form-data">
@@ -504,7 +588,7 @@ http_response_code($status);
 					</div>
 				</form>
 			</section>
-		<?php else: ?>
+		<?php elseif (!$profileViewRequested && !$postViewRequested): ?>
 			<aside class="visitor-prompt">
 				<p>Join the conversation: <a href="login.php?redirect=home.php">sign in</a> or <a href="register.php?redirect=home.php">create an account</a> to share a post.</p>
 			</aside>
@@ -514,12 +598,12 @@ http_response_code($status);
 			<div class="home-feed-heading">
 				<div>
 					<p class="home-eyebrow">From the community</p>
-					<h2 id="feed-heading">Latest posts</h2>
+					<h2 id="feed-heading"><?= $postViewRequested ? 'Post and comments' : ($profileUser !== null ? 'Posts by @' . escape_html((string) $profileUser['username']) : ($profileViewRequested ? 'Account posts' : 'Latest posts')) ?></h2>
 				</div>
 			</div>
-			<?php if ($posts === []): ?>
-				<p class="empty-feed">No posts yet. <?= $isSignedIn ? 'Be the first to start the conversation.' : 'Check back soon for community updates.' ?></p>
-			<?php else: ?>
+			<?php if ($posts === [] && (!$profileViewRequested || $profileUser !== null)): ?>
+				<p class="empty-feed"><?php if ($profileUser !== null): ?>@<?= escape_html((string) $profileUser['username']) ?> hasn't shared any posts yet.<?php else: ?>No posts yet. <?= $isSignedIn ? 'Be the first to start the conversation.' : 'Check back soon for community updates.' ?><?php endif; ?></p>
+			<?php elseif ($posts !== []): ?>
 				<div class="post-list">
 					<?php foreach ($posts as $post): ?>
 						<?php
@@ -529,34 +613,36 @@ http_response_code($status);
 							: 'post-' . $postId;
 						$stats = $interactionStats[$postId] ?? ['like_count' => 0, 'comment_count' => 0, 'repost_count' => 0];
 						?>
-						<article class="post-card" id="<?= escape_html($feedItemKey) ?>">
+						<article class="post-card<?= $postViewRequested ? '' : ' is-openable' ?>" id="<?= escape_html($feedItemKey) ?>"<?= $postViewRequested ? '' : ' tabindex="0" aria-label="Open post by @' . escape_html((string) $post['username']) . '" data-post-url="home.php?post_id=' . $postId . '"' ?>>
 							<?php if ($post['feed_type'] === 'repost'): ?>
-								<p class="post-repost-attribution"><?= escape_html((string) $post['reposter_username']) ?> reposted</p>
+								<p class="post-repost-attribution"><a class="profile-link" href="home.php?user_id=<?= (int) $post['reposter_user_id'] ?>"><?= escape_html((string) $post['reposter_username']) ?></a> reposted</p>
 							<?php endif; ?>
 							<header class="post-author">
-								<span><?= escape_html((string) $post['username']) ?></span>
+								<a class="profile-link" href="home.php?user_id=<?= (int) $post['user_id'] ?>"><?= escape_html((string) $post['username']) ?></a>
 								<time datetime="<?= escape_html((string) $post['feed_created_at']) ?>"><?= escape_html(date('M j, Y \a\t g:i a', strtotime((string) $post['feed_created_at']))) ?></time>
 							</header>
-							<?php if (is_string($post['content']) && $post['content'] !== ''): ?>
-								<p class="post-content"><?= nl2br(escape_html((string) $post['content'])) ?></p>
-							<?php endif; ?>
-							<?php if ($post['media_type'] === 'image' && is_string($post['media_path'])): ?>
-								<img class="post-media" src="<?= escape_html((string) $post['media_path']) ?>" alt="Photo shared by <?= escape_html((string) $post['username']) ?>" loading="lazy">
-							<?php elseif ($post['media_type'] === 'video' && is_string($post['media_path'])): ?>
-								<video class="post-media" controls preload="metadata">
-									<source src="<?= escape_html((string) $post['media_path']) ?>">
-									Your browser does not support video playback.
-								</video>
-							<?php endif; ?>
+							<div class="post-open-content">
+								<?php if (is_string($post['content']) && $post['content'] !== ''): ?>
+									<p class="post-content"><?= nl2br(escape_html((string) $post['content'])) ?></p>
+								<?php endif; ?>
+								<?php if ($post['media_type'] === 'image' && is_string($post['media_path'])): ?>
+									<img class="post-media" src="<?= escape_html((string) $post['media_path']) ?>" alt="Photo shared by <?= escape_html((string) $post['username']) ?>" loading="lazy">
+								<?php elseif ($post['media_type'] === 'video' && is_string($post['media_path'])): ?>
+									<video class="post-media"<?= $postViewRequested ? ' controls' : '' ?> preload="metadata">
+										<source src="<?= escape_html((string) $post['media_path']) ?>">
+										Your browser does not support video playback.
+									</video>
+								<?php endif; ?>
+							</div>
 							<div class="post-interactions" aria-label="Post interactions">
 								<?php if ($isSignedIn): ?>
-									<form action="home.php" method="post">
+									<form action="home.php<?= escape_html($postViewRequested ? $postRedirect : $profileRedirect) ?>" method="post">
 										<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
 										<input type="hidden" name="post_id" value="<?= $postId ?>">
 										<input type="hidden" name="action" value="like">
 										<button class="post-action<?= isset($likedPostIds[$postId]) ? ' is-active' : '' ?>" type="submit" aria-pressed="<?= isset($likedPostIds[$postId]) ? 'true' : 'false' ?>">&#9829; <?= isset($likedPostIds[$postId]) ? 'Liked' : 'Like' ?> <span><?= (int) $stats['like_count'] ?></span></button>
 									</form>
-									<form action="home.php" method="post">
+									<form action="home.php<?= escape_html($postViewRequested ? $postRedirect : $profileRedirect) ?>" method="post">
 										<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
 										<input type="hidden" name="post_id" value="<?= $postId ?>">
 										<input type="hidden" name="action" value="repost">
@@ -568,15 +654,17 @@ http_response_code($status);
 								<?php endif; ?>
 								<span class="post-action-summary"><?= (int) $stats['comment_count'] ?> comments</span>
 							</div>
-							<?php if (!empty($commentsByPost[$postId])): ?>
+							<?php if ($postViewRequested && !empty($commentsByPost[$postId])): ?>
 								<div class="post-comments" aria-label="Recent comments">
 									<?php foreach ($commentsByPost[$postId] as $comment): ?>
 										<?php render_comment($comment, $repliesByParent, $commentStats, $likedCommentIds, $repostedCommentIds, $isSignedIn); ?>
 									<?php endforeach; ?>
 								</div>
+							<?php elseif ($postViewRequested): ?>
+								<p class="empty-feed">No comments yet. Be the first to join the conversation.</p>
 							<?php endif; ?>
-							<?php if ($isSignedIn): ?>
-								<form class="post-comment-form post-root-comment-form" action="home_action.php" method="post" enctype="multipart/form-data">
+							<?php if ($isSignedIn && $postViewRequested): ?>
+								<form class="post-comment-form post-root-comment-form" action="home_action.php<?= escape_html($postRedirect) ?>" method="post" enctype="multipart/form-data">
 									<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
 									<input type="hidden" name="target_type" value="post">
 									<input type="hidden" name="target_id" value="<?= $postId ?>">
@@ -595,5 +683,28 @@ http_response_code($status);
 			<?php endif; ?>
 		</section>
 	</main>
+	<?php if (!$postViewRequested): ?>
+		<script>
+			document.querySelectorAll('.post-card.is-openable').forEach((postCard) => {
+				const openPost = () => {
+					window.location.href = postCard.dataset.postUrl;
+				};
+
+				postCard.addEventListener('click', (event) => {
+					if (event.target.closest('a, button, input, textarea, select, video, audio, form, [contenteditable="true"]')) {
+						return;
+					}
+					openPost();
+				});
+
+				postCard.addEventListener('keydown', (event) => {
+					if (event.target === postCard && event.key === 'Enter') {
+						event.preventDefault();
+						openPost();
+					}
+				});
+			});
+		</script>
+	<?php endif; ?>
 </body>
 </html>
