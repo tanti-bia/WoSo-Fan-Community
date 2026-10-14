@@ -612,64 +612,66 @@ http_response_code($status);
 	<link rel="stylesheet" href="styles.css">
 </head>
 <body>
-	<nav class="topnav" aria-label="Main navigation">
-		<a class="active" aria-current="page" href="home.php">Home</a>
-		<a href="matches.php">Match Center</a>
-		<a href="community.html">Community</a>
-		<a href="polls.php">Polls</a>
-		<a href="predictions.php">Predictions</a>
-		<?= notifications_nav_link() ?>
-		<?php if (can_access_moderation()): ?>
-			<a href="moderation.php">Moderation</a>
-		<?php endif; ?>
-		<?= account_nav_link() ?>
-	</nav>
-	<main class="home-page">
-		<header class="home-heading">
-			<p class="home-eyebrow">A community for the beautiful game</p>
-			<?php if ($profileUser === null): ?>
-				<h1><?= $postViewRequested && $posts !== [] ? 'Post by @' . escape_html((string) $posts[0]['username']) : 'Women\'s Football Community' ?></h1>
+	<?php if (!$postViewRequested): ?>
+		<nav class="topnav" aria-label="Main navigation">
+			<a class="active" aria-current="page" href="home.php">Home</a>
+			<a href="matches.php">Match Center</a>
+			<a href="community.html">Community</a>
+			<a href="polls.php">Polls</a>
+			<a href="predictions.php">Predictions</a>
+			<?= notifications_nav_link() ?>
+			<?php if (can_access_moderation()): ?>
+				<a href="moderation.php">Moderation</a>
 			<?php endif; ?>
-			<?php if ($postViewRequested): ?>
-				<p><a href="<?= $profileUser !== null ? 'home.php?user_id=' . (int) $profileUser['user_id'] : ($posts !== [] ? 'home.php?user_id=' . (int) $posts[0]['user_id'] : 'home.php') ?>">Back to posts</a></p>
-			<?php elseif ($profileUser !== null): ?>
-				<div class="public-profile">
-					<?php if (is_string($profileUser['profile_image_path']) && $profileUser['profile_image_path'] !== ''): ?>
-						<img class="profile-avatar" src="<?= escape_html((string) $profileUser['profile_image_path']) ?>" alt="<?= escape_html((string) ($profileUser['display_name'] ?: $profileUser['username'])) ?>'s profile picture">
-					<?php else: ?>
-						<div class="profile-avatar profile-avatar-placeholder" aria-hidden="true"><?= escape_html(strtoupper(substr((string) $profileUser['username'], 0, 1))) ?></div>
-					<?php endif; ?>
-					<div class="public-profile-details">
-						<?php if (is_string($profileUser['display_name']) && $profileUser['display_name'] !== ''): ?>
-							<h2><?= escape_html((string) $profileUser['display_name']) ?></h2>
+			<?= account_nav_link() ?>
+		</nav>
+	<?php endif; ?>
+	<main class="home-page">
+		<?php if (!$postViewRequested): ?>
+			<header class="home-heading">
+				<p class="home-eyebrow">A community for the beautiful game</p>
+				<?php if ($profileUser === null): ?>
+					<h1>Women's Football Community</h1>
+				<?php endif; ?>
+				<?php if ($profileUser !== null): ?>
+					<div class="public-profile">
+						<?php if (is_string($profileUser['profile_image_path']) && $profileUser['profile_image_path'] !== ''): ?>
+							<img class="profile-avatar" src="<?= escape_html((string) $profileUser['profile_image_path']) ?>" alt="<?= escape_html((string) ($profileUser['display_name'] ?: $profileUser['username'])) ?>'s profile picture">
+						<?php else: ?>
+							<div class="profile-avatar profile-avatar-placeholder" aria-hidden="true"><?= escape_html(strtoupper(substr((string) $profileUser['username'], 0, 1))) ?></div>
 						<?php endif; ?>
-						<p class="profile-username">@<?= escape_html((string) $profileUser['username']) ?></p>
-						<?php if (is_string($profileUser['bio']) && $profileUser['bio'] !== ''): ?>
-							<p class="profile-bio"><?= nl2br(escape_html((string) $profileUser['bio'])) ?></p>
-						<?php endif; ?>
-						<div class="profile-facts">
-							<?php if (is_string($profileUser['favorite_team']) && $profileUser['favorite_team'] !== ''): ?>
-								<p><strong>Favorite team</strong> <?= escape_html((string) $profileUser['favorite_team']) ?></p>
+						<div class="public-profile-details">
+							<?php if (is_string($profileUser['display_name']) && $profileUser['display_name'] !== ''): ?>
+								<h2><?= escape_html((string) $profileUser['display_name']) ?></h2>
 							<?php endif; ?>
-							<?php if (is_string($profileUser['location']) && $profileUser['location'] !== ''): ?>
-								<p><strong>Location</strong> <?= escape_html((string) $profileUser['location']) ?></p>
+							<p class="profile-username">@<?= escape_html((string) $profileUser['username']) ?></p>
+							<?php if (is_string($profileUser['bio']) && $profileUser['bio'] !== ''): ?>
+								<p class="profile-bio"><?= nl2br(escape_html((string) $profileUser['bio'])) ?></p>
 							<?php endif; ?>
+							<div class="profile-facts">
+								<?php if (is_string($profileUser['favorite_team']) && $profileUser['favorite_team'] !== ''): ?>
+									<p><strong>Favorite team</strong> <?= escape_html((string) $profileUser['favorite_team']) ?></p>
+								<?php endif; ?>
+								<?php if (is_string($profileUser['location']) && $profileUser['location'] !== ''): ?>
+									<p><strong>Location</strong> <?= escape_html((string) $profileUser['location']) ?></p>
+								<?php endif; ?>
+							</div>
 						</div>
 					</div>
-				</div>
-				<nav class="profile-activity-menu" aria-label="View profile activity">
-					<a class="<?= $profileActivity === 'posts' ? 'active' : '' ?>"<?= $profileActivity === 'posts' ? ' aria-current="page"' : '' ?> href="home.php?user_id=<?= (int) $profileUser['user_id'] ?>&amp;activity=posts">Posts</a>
-					<a class="<?= $profileActivity === 'reposts' ? 'active' : '' ?>"<?= $profileActivity === 'reposts' ? ' aria-current="page"' : '' ?> href="home.php?user_id=<?= (int) $profileUser['user_id'] ?>&amp;activity=reposts">Reposts</a>
-					<a class="<?= $profileActivity === 'comments' ? 'active' : '' ?>"<?= $profileActivity === 'comments' ? ' aria-current="page"' : '' ?> href="home.php?user_id=<?= (int) $profileUser['user_id'] ?>&amp;activity=comments">Comments</a>
-				</nav>
-				<?php if ($isSignedIn && $profileUserId === (int) $_SESSION['user_id']): ?>
-					<p><a href="profile.php?edit=1">Edit your profile</a></p>
+					<nav class="profile-activity-menu" aria-label="View profile activity">
+						<a class="<?= $profileActivity === 'posts' ? 'active' : '' ?>"<?= $profileActivity === 'posts' ? ' aria-current="page"' : '' ?> href="home.php?user_id=<?= (int) $profileUser['user_id'] ?>&amp;activity=posts">Posts</a>
+						<a class="<?= $profileActivity === 'reposts' ? 'active' : '' ?>"<?= $profileActivity === 'reposts' ? ' aria-current="page"' : '' ?> href="home.php?user_id=<?= (int) $profileUser['user_id'] ?>&amp;activity=reposts">Reposts</a>
+						<a class="<?= $profileActivity === 'comments' ? 'active' : '' ?>"<?= $profileActivity === 'comments' ? ' aria-current="page"' : '' ?> href="home.php?user_id=<?= (int) $profileUser['user_id'] ?>&amp;activity=comments">Comments</a>
+					</nav>
+					<?php if ($isSignedIn && $profileUserId === (int) $_SESSION['user_id']): ?>
+						<p><a href="profile.php?edit=1">Edit your profile</a></p>
+					<?php endif; ?>
+					<p><a href="home.php">Back to the community feed</a></p>
+				<?php else: ?>
+				<p>Share the moments, matches, and conversations you love with fans everywhere.</p>
 				<?php endif; ?>
-				<p><a href="home.php">Back to the community feed</a></p>
-			<?php else: ?>
-			<p>Share the moments, matches, and conversations you love with fans everywhere.</p>
-			<?php endif; ?>
-		</header>
+			</header>
+		<?php endif; ?>
 
 		<?php if ($error !== ''): ?>
 			<p class="auth-message auth-error" role="alert"><?= escape_html($error) ?></p>
@@ -702,13 +704,15 @@ http_response_code($status);
 			</aside>
 		<?php endif; ?>
 
-		<section class="home-feed" aria-labelledby="feed-heading">
-			<div class="home-feed-heading">
-				<div>
-					<p class="home-eyebrow">From the community</p>
-					<h2 id="feed-heading"><?= $postViewRequested ? 'Post and comments' : ($profileUser !== null ? ucfirst($profileActivity) : ($profileViewRequested ? 'Account posts' : 'Latest posts')) ?></h2>
+		<section class="home-feed" <?= $postViewRequested ? 'aria-label="Post and comments"' : 'aria-labelledby="feed-heading"' ?>>
+			<?php if (!$postViewRequested): ?>
+				<div class="home-feed-heading">
+					<div>
+						<p class="home-eyebrow">From the community</p>
+						<h2 id="feed-heading"><?= $profileUser !== null ? ucfirst($profileActivity) : ($profileViewRequested ? 'Account posts' : 'Latest posts') ?></h2>
+					</div>
 				</div>
-			</div>
+			<?php endif; ?>
 			<?php if ($profileUser !== null && $profileActivity === 'comments'): ?>
 				<?php if ($profileComments === []): ?>
 					<p class="empty-feed">@<?= escape_html((string) $profileUser['username']) ?> hasn't commented on any posts yet.</p>
@@ -832,7 +836,9 @@ http_response_code($status);
 									<p class="post-content"><?= nl2br(escape_html((string) $post['content'])) ?></p>
 								<?php endif; ?>
 								<?php if ($post['media_type'] === 'image' && is_string($post['media_path'])): ?>
-									<img class="post-media" src="<?= escape_html((string) $post['media_path']) ?>" alt="Photo shared by <?= escape_html((string) $post['username']) ?>" loading="lazy">
+									<button class="post-image-button" type="button" aria-label="Enlarge photo shared by @<?= escape_html((string) $post['username']) ?>">
+										<img class="post-media" src="<?= escape_html((string) $post['media_path']) ?>" alt="Photo shared by <?= escape_html((string) $post['username']) ?>" loading="lazy">
+									</button>
 								<?php elseif ($post['media_type'] === 'video' && is_string($post['media_path'])): ?>
 									<video class="post-media"<?= $postViewRequested ? ' controls' : '' ?> preload="metadata">
 										<source src="<?= escape_html((string) $post['media_path']) ?>">
@@ -889,7 +895,33 @@ http_response_code($status);
 			<?php endif; ?>
 		</section>
 	</main>
+	<dialog class="image-viewer" aria-label="Enlarged post photo">
+		<button class="image-viewer-close" type="button" aria-label="Close enlarged photo">&times;</button>
+		<img class="image-viewer-photo" alt="">
+	</dialog>
 	<script>
+		const imageViewer = document.querySelector('.image-viewer');
+		const imageViewerPhoto = imageViewer.querySelector('.image-viewer-photo');
+
+		document.querySelectorAll('.post-image-button').forEach((imageButton) => {
+			imageButton.addEventListener('click', () => {
+				const postPhoto = imageButton.querySelector('.post-media');
+				imageViewerPhoto.src = postPhoto.src;
+				imageViewerPhoto.alt = postPhoto.alt;
+				imageViewer.showModal();
+			});
+		});
+
+		imageViewer.querySelector('.image-viewer-close').addEventListener('click', () => {
+			imageViewer.close();
+		});
+
+		imageViewer.addEventListener('click', (event) => {
+			if (event.target === imageViewer) {
+				imageViewer.close();
+			}
+		});
+
 		document.querySelectorAll('.post-card.is-openable, .profile-comment-card.is-openable, .comment-card.is-openable').forEach((openableCard) => {
 			const openCard = () => {
 				window.location.href = openableCard.dataset.postUrl;
