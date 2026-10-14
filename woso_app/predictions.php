@@ -20,7 +20,7 @@ require_once __DIR__ . '/auth.php';
 	<?php if (can_access_moderation()): ?>
 		<a href="moderation.php">Moderation</a>
 	<?php endif; ?>
-	<a href="login.php">Account</a>
+	<?= account_nav_link() ?>
 </nav>
 
 <main>

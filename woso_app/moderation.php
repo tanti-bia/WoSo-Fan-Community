@@ -20,7 +20,7 @@ require_role(['Moderator', 'Administrator']);
 	<a href="predictions.php">Predictions</a>
 	<?= notifications_nav_link() ?>
 	<a class="active" aria-current="page" href="moderation.php">Moderation</a>
-	<a href="login.php">Account</a>
+	<?= account_nav_link() ?>
 </nav>
 
 <img src="https://www.fcbarcelona.com/photo-resources/2026/05/23/ece710a5-9365-48f9-ac6e-05d5e69b17b4/_5DS4138.jpg?width=2400&height=1500" width="50%">

@@ -95,6 +95,16 @@ function can_access_moderation(): bool
 	return in_array($_SESSION['role'] ?? '', ['Moderator', 'Administrator'], true);
 }
 
+function account_nav_link(bool $active = false): string
+{
+	$signedIn = isset($_SESSION['user_id']);
+	$label = $signedIn ? 'Profile' : 'Sign in';
+	$href = $signedIn ? 'profile.php' : 'login.php';
+
+	return '<a' . ($active ? ' class="active" aria-current="page"' : '')
+		. ' href="' . $href . '">' . $label . '</a>';
+}
+
 function notifications_nav_link(bool $active = false): string
 {
 	$count = null;

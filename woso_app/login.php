@@ -4,6 +4,11 @@ declare(strict_types=1);
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/database.php';
 
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_SESSION['user_id'])) {
+	header('Location: profile.php');
+	exit;
+}
+
 $error = '';
 $email = '';
 $status = 200;
@@ -71,28 +76,14 @@ http_response_code($status);
 		<?php if (can_access_moderation()): ?>
 			<a href="moderation.php">Moderation</a>
 		<?php endif; ?>
-		<a class="active" aria-current="page" href="login.php">Account</a>
+		<?= account_nav_link(true) ?>
 	</nav>
 	<main class="auth-card">
 		<a class="auth-home-link" href="home.html">Women's Football Community</a>
 		<?php if (isset($_SESSION['user_id'])): ?>
 			<h1>Your account</h1>
-			<p class="auth-intro">You are signed in to your Women's Football Community account.</p>
-			<dl>
-				<dt>Username</dt>
-				<dd><?= escape_html((string) $_SESSION['username']) ?></dd>
-				<?php if (!empty($_SESSION['email'])): ?>
-					<dt>Email address</dt>
-					<dd><?= escape_html((string) $_SESSION['email']) ?></dd>
-				<?php endif; ?>
-				<dt>Account type</dt>
-				<dd><?= escape_html((string) $_SESSION['role']) ?></dd>
-			</dl>
-			<p><a href="home.html">Continue to the community</a></p>
-			<form action="logout.php" method="post">
-				<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
-				<button class="auth-button" type="submit">Sign out</button>
-			</form>
+			<p class="auth-intro">Manage your account from your profile page.</p>
+			<p><a class="auth-button" href="profile.php">Open your profile</a></p>
 		<?php else: ?>
 			<h1>Sign in</h1>
 			<p class="auth-intro">Sign in to your Women's Football Community account.</p>

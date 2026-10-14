@@ -6,3 +6,4 @@ README.md
 woso_app/uploads/posts/*
 !woso_app/uploads/posts/.gitignore
 !woso_app/uploads/posts/.htaccess
+woso_app/uploads/profiles/*

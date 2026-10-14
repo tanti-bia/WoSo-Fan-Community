@@ -24,7 +24,7 @@ http_response_code(503);
 		<?php if (can_access_moderation()): ?>
 			<a href="moderation.php">Moderation</a>
 		<?php endif; ?>
-		<a href="login.php"><?= isset($_SESSION['user_id']) ? 'Account' : 'Sign in' ?></a>
+		<?= account_nav_link() ?>
 	</nav>
 	<main class="match-unavailable-page">
 		<section class="match-unavailable-card" role="status">

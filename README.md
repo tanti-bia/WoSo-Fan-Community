@@ -18,8 +18,15 @@ Page: Predictions
 Functionalities and features: Submit score predictions before matches and earn points
 
 Page: User profiles
-Functionalities and features: Click a username on a post or comment to view that
-member's published posts; display favorite teams and prediction history
+Functionalities and features: Members can edit a display name, short bio,
+favorite team, location, and profile picture. Clicking a username on a post or
+comment shows those public profile details and the member's published posts.
+Public profiles let visitors switch between the member's posts, reposts, and
+comments. The Comments view shows the original post or replied-to comment for
+context, followed by the member's comment, and lets visitors open that comment
+in its post conversation.
+The signed-in Profile page also shows account details and provides Edit profile
+and Log out actions.
 Page: Notifications
 Functionalities and features: Notify post owners when a user likes, comments on, or reposts their posts
 
@@ -85,9 +92,10 @@ MySQL database with an external provider before deploying.
    browser; users do not need XAMPP.
 6. The Blueprint mounts persistent storage at `/var/www/html/uploads`. If
    migrating existing posts, transfer the files in `woso_app/uploads/posts`
-   into the mounted disk's `posts` directory as well as importing the database;
-   uploaded media is not included in the Docker image. Keep future database
-   backups and media backups independently.
+   into the mounted disk's `posts` directory and profile pictures from
+   `woso_app/uploads/profiles` into its `profiles` directory, as well as
+   importing the database. Uploaded media is not included in the Docker image.
+   Keep future database backups and media backups independently.
 7. To enable Google sign-in, configure `WOSO_GOOGLE_CLIENT_ID`,
    `WOSO_GOOGLE_CLIENT_SECRET`, and `WOSO_GOOGLE_REDIRECT_URI` as Render
    environment variables. Add the HTTPS callback URL
@@ -146,6 +154,12 @@ ALTER TABLE notifications
 
 PHP pages must be served through a PHP-enabled web server; opening them
 directly as files does not run the account backend.
+Signed-in users can edit their public profile with a display name, bio, favorite
+team, location, and a JPEG, PNG, or WebP profile picture (up to 5 MB). Profile
+pictures are stored in `woso_app/uploads/profiles` or the persistent `uploads`
+directory in deployment. Profile fields are optional and do not alter account
+credentials.
+
 Signed-in users can publish text posts and attach one JPEG, PNG, GIF,
 or WebP photo, or one MP4, WebM, or MOV video (up to 25 MB). Uploaded media is
 stored in `woso_app/uploads/posts` (or `uploads/posts` when deployed at the
@@ -176,6 +190,18 @@ Google sign-in:
 ALTER TABLE users
 	ADD COLUMN google_sub VARCHAR(255) NULL,
 	ADD UNIQUE KEY users_google_sub_unique (google_sub);
+```
+
+For an existing database, add the optional profile fields before opening
+`profile.php` or member profile pages:
+
+```sql
+ALTER TABLE users
+	ADD COLUMN display_name VARCHAR(60) NULL,
+	ADD COLUMN bio VARCHAR(500) NULL,
+	ADD COLUMN favorite_team VARCHAR(100) NULL,
+	ADD COLUMN location VARCHAR(100) NULL,
+	ADD COLUMN profile_image_path VARCHAR(255) NULL;
 ```
 
 For local XAMPP development the database connection defaults to MySQL on localhost

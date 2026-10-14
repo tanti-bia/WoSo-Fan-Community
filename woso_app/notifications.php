@@ -68,7 +68,7 @@ http_response_code($status);
 		<?php if (can_access_moderation()): ?>
 			<a href="moderation.php">Moderation</a>
 		<?php endif; ?>
-		<a href="login.php">Account</a>
+		<?= account_nav_link() ?>
 	</nav>
 
 	<main class="notifications-page">

@@ -11,11 +11,31 @@ function render_comment(
 	int $depth = 0
 ): void {
 	$commentId = (int) $comment['comment_id'];
+	$commentUrl = 'home.php?post_id=' . (int) $comment['post_id'] . '#comment-' . $commentId;
 	$stats = $commentStats[$commentId] ?? ['like_count' => 0, 'reply_count' => 0, 'repost_count' => 0];
 	?>
-	<article class="comment-card<?= $depth > 0 ? ' comment-reply' : '' ?>" id="comment-<?= $commentId ?>" style="--comment-depth: <?= min($depth, 5) ?>">
+	<article class="comment-card is-openable<?= $depth > 0 ? ' comment-reply' : '' ?>"
+		id="comment-<?= $commentId ?>"
+		tabindex="0"
+		aria-label="Open comment by @<?= escape_html((string) $comment['username']) ?>"
+		data-post-url="<?= escape_html($commentUrl) ?>"
+		style="--comment-depth: <?= min($depth, 5) ?>">
 		<header class="post-author">
-			<strong><a class="profile-link" href="home.php?user_id=<?= (int) $comment['user_id'] ?>"><?= escape_html((string) $comment['username']) ?></a></strong>
+			<div class="post-author-identity">
+				<a class="post-author-avatar-link" href="home.php?user_id=<?= (int) $comment['user_id'] ?>" aria-label="View @<?= escape_html((string) $comment['username']) ?>'s profile">
+					<?php if (is_string($comment['profile_image_path']) && $comment['profile_image_path'] !== ''): ?>
+						<img class="post-author-avatar" src="<?= escape_html((string) $comment['profile_image_path']) ?>" alt="" loading="lazy">
+					<?php else: ?>
+						<span class="post-author-avatar post-author-avatar-placeholder" aria-hidden="true"><?= escape_html(strtoupper(substr((string) $comment['username'], 0, 1))) ?></span>
+					<?php endif; ?>
+				</a>
+				<span class="post-author-names">
+					<?php if (is_string($comment['display_name']) && $comment['display_name'] !== ''): ?>
+						<span class="post-author-display-name"><?= escape_html((string) $comment['display_name']) ?></span>
+					<?php endif; ?>
+					<a class="profile-link" href="home.php?user_id=<?= (int) $comment['user_id'] ?>">@<?= escape_html((string) $comment['username']) ?></a>
+				</span>
+			</div>
 			<time datetime="<?= escape_html((string) $comment['created_at']) ?>"><?= escape_html(date('M j, Y \a\t g:i a', strtotime((string) $comment['created_at']))) ?></time>
 		</header>
 		<?php if (is_string($comment['content']) && $comment['content'] !== ''): ?>

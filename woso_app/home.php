@@ -23,6 +23,8 @@ $repostedCommentIds = [];
 $profileViewRequested = array_key_exists('user_id', $_GET);
 $profileUserId = null;
 $profileUser = null;
+$profileActivity = 'posts';
+$profileComments = [];
 $profileRedirect = '';
 $postViewRequested = array_key_exists('post_id', $_GET);
 $postViewId = null;
@@ -38,7 +40,16 @@ if ($profileViewRequested) {
 		$status = 400;
 	} else {
 		$profileUserId = $validatedUserId;
-		$profileRedirect = '?user_id=' . $profileUserId;
+		$requestedActivity = isset($_GET['activity']) && is_string($_GET['activity'])
+			? $_GET['activity']
+			: 'posts';
+		if (!in_array($requestedActivity, ['posts', 'reposts', 'comments'], true)) {
+			$error = 'Choose a valid profile activity.';
+			$status = 400;
+		} else {
+			$profileActivity = $requestedActivity;
+		}
+		$profileRedirect = '?user_id=' . $profileUserId . '&activity=' . rawurlencode($profileActivity);
 	}
 }
 
@@ -346,8 +357,10 @@ try {
 		$statement = $database->prepare(
 			'SELECT posts.post_id AS feed_item_id, \'post\' AS feed_type,
 				posts.created_at AS feed_created_at, NULL AS reposter_username,
-				NULL AS reposter_user_id, posts.post_id, posts.content, posts.media_path,
-				posts.media_type, posts.created_at, users.user_id, users.username
+				NULL AS reposter_user_id, NULL AS reposter_display_name,
+				NULL AS reposter_profile_image_path, posts.post_id, posts.content, posts.media_path,
+				posts.media_type, posts.created_at, users.user_id, users.username,
+				users.display_name, users.profile_image_path
 			FROM posts
 			INNER JOIN users ON users.user_id = posts.user_id
 			WHERE posts.status = \'published\' AND posts.post_id = :post_id'
@@ -362,19 +375,22 @@ try {
 
 	if ($profileViewRequested && $profileUserId !== null) {
 		$profileQuery = $database->prepare(
-			'SELECT user_id, username FROM users WHERE user_id = :user_id'
+			'SELECT user_id, username, display_name, bio, favorite_team, location, profile_image_path
+			FROM users WHERE user_id = :user_id'
 		);
 		$profileQuery->execute(['user_id' => $profileUserId]);
 		$profileUser = $profileQuery->fetch() ?: null;
 		if ($profileUser === null) {
 			$error = 'That account could not be found.';
 			$status = 404;
-		} else {
+		} elseif ($profileActivity === 'posts') {
 			$statement = $database->prepare(
 				'SELECT posts.post_id AS feed_item_id, \'post\' AS feed_type,
 					posts.created_at AS feed_created_at, NULL AS reposter_username,
-					NULL AS reposter_user_id, posts.post_id, posts.content, posts.media_path,
-					posts.media_type, posts.created_at, users.user_id, users.username
+					NULL AS reposter_user_id, NULL AS reposter_display_name,
+					NULL AS reposter_profile_image_path, posts.post_id, posts.content, posts.media_path,
+					posts.media_type, posts.created_at, users.user_id, users.username,
+					users.display_name, users.profile_image_path
 				FROM posts
 				INNER JOIN users ON users.user_id = posts.user_id
 				WHERE posts.status = \'published\' AND posts.user_id = :user_id
@@ -382,6 +398,56 @@ try {
 			);
 			$statement->execute(['user_id' => $profileUserId]);
 			$posts = $statement->fetchAll();
+		} elseif ($profileActivity === 'reposts') {
+			$statement = $database->prepare(
+				'SELECT post_reposts.repost_id AS feed_item_id, \'repost\' AS feed_type,
+					post_reposts.created_at AS feed_created_at,
+					reposting_users.username AS reposter_username,
+					reposting_users.user_id AS reposter_user_id,
+					reposting_users.display_name AS reposter_display_name,
+					reposting_users.profile_image_path AS reposter_profile_image_path,
+					posts.post_id, posts.content, posts.media_path, posts.media_type,
+					posts.created_at, authors.user_id, authors.username,
+					authors.display_name, authors.profile_image_path
+				FROM post_reposts
+				INNER JOIN posts ON posts.post_id = post_reposts.post_id
+				INNER JOIN users AS authors ON authors.user_id = posts.user_id
+				INNER JOIN users AS reposting_users ON reposting_users.user_id = post_reposts.user_id
+				WHERE post_reposts.user_id = :user_id AND posts.status = \'published\'
+				ORDER BY post_reposts.created_at DESC, post_reposts.repost_id DESC'
+			);
+			$statement->execute(['user_id' => $profileUserId]);
+			$posts = $statement->fetchAll();
+		} else {
+			$statement = $database->prepare(
+				'SELECT comments.comment_id, comments.post_id, comments.content,
+					comments.parent_comment_id, comments.media_path, comments.media_type, comments.created_at,
+					LEFT(posts.content, 220) AS post_content,
+					CHAR_LENGTH(posts.content) > 220 AS post_content_truncated,
+					posts.media_type AS post_media_type,
+					authors.user_id AS post_author_user_id,
+					authors.username AS post_author_username,
+					LEFT(parent_comments.content, 220) AS parent_comment_preview,
+					CHAR_LENGTH(parent_comments.content) > 220 AS parent_comment_truncated,
+					parent_comments.media_type AS parent_comment_media_type,
+					parent_users.user_id AS parent_user_id,
+					parent_users.username AS parent_username,
+					parent_users.display_name AS parent_display_name
+				FROM comments
+				INNER JOIN posts ON posts.post_id = comments.post_id
+				INNER JOIN users AS authors ON authors.user_id = posts.user_id
+				LEFT JOIN comments AS parent_comments
+					ON parent_comments.comment_id = comments.parent_comment_id
+					AND parent_comments.status = \'published\'
+				LEFT JOIN users AS parent_users ON parent_users.user_id = parent_comments.user_id
+				WHERE comments.user_id = :user_id
+					AND comments.status = \'published\'
+					AND posts.status = \'published\'
+				ORDER BY comments.created_at DESC, comments.comment_id DESC
+				LIMIT 100'
+			);
+			$statement->execute(['user_id' => $profileUserId]);
+			$profileComments = $statement->fetchAll();
 		}
 	}
 
@@ -389,18 +455,24 @@ try {
 		$statement = $database->query(
 			'SELECT feed_items.feed_item_id, feed_items.feed_type, feed_items.feed_created_at,
 				feed_items.reposter_username, feed_items.reposter_user_id,
+				feed_items.reposter_display_name, feed_items.reposter_profile_image_path,
 				posts.post_id, posts.content, posts.media_path, posts.media_type,
-				posts.created_at, users.user_id, users.username
+				posts.created_at, users.user_id, users.username,
+				users.display_name, users.profile_image_path
 			FROM (
 				SELECT posts.post_id AS feed_item_id, \'post\' AS feed_type,
 					posts.created_at AS feed_created_at, NULL AS reposter_username,
-					NULL AS reposter_user_id, posts.post_id
+					NULL AS reposter_user_id, NULL AS reposter_display_name,
+					NULL AS reposter_profile_image_path, posts.post_id
 				FROM posts
 				WHERE posts.status = \'published\'
 				UNION ALL
 				SELECT post_reposts.repost_id AS feed_item_id, \'repost\' AS feed_type,
 					post_reposts.created_at AS feed_created_at, reposting_users.username AS reposter_username,
-					post_reposts.user_id AS reposter_user_id, post_reposts.post_id
+					post_reposts.user_id AS reposter_user_id,
+					reposting_users.display_name AS reposter_display_name,
+					reposting_users.profile_image_path AS reposter_profile_image_path,
+					post_reposts.post_id
 				FROM post_reposts
 				INNER JOIN posts ON posts.post_id = post_reposts.post_id
 				INNER JOIN users AS reposting_users ON reposting_users.user_id = post_reposts.user_id
@@ -453,7 +525,7 @@ try {
 			'WITH RECURSIVE recent_roots AS (
 				SELECT comments.comment_id, comments.post_id, comments.parent_comment_id,
 					comments.user_id, comments.content, comments.media_path, comments.media_type,
-					comments.created_at, users.username
+					comments.created_at, users.username, users.display_name, users.profile_image_path
 				FROM comments
 				INNER JOIN users ON users.user_id = comments.user_id
 				WHERE comments.post_id IN (' . $placeholders . ')
@@ -463,12 +535,14 @@ try {
 			comment_tree AS (
 				SELECT recent_roots.comment_id, recent_roots.post_id, recent_roots.parent_comment_id,
 					recent_roots.user_id, recent_roots.content, recent_roots.media_path, recent_roots.media_type,
-					recent_roots.created_at, recent_roots.username, 0 AS depth
+					recent_roots.created_at, recent_roots.username, recent_roots.display_name,
+					recent_roots.profile_image_path, 0 AS depth
 				FROM recent_roots
 				UNION ALL
 				SELECT replies.comment_id, replies.post_id, replies.parent_comment_id,
 					replies.user_id, replies.content, replies.media_path, replies.media_type,
-					replies.created_at, reply_users.username, comment_tree.depth + 1
+					replies.created_at, reply_users.username, reply_users.display_name,
+					reply_users.profile_image_path, comment_tree.depth + 1
 				FROM comments AS replies
 				INNER JOIN comment_tree ON comment_tree.comment_id = replies.parent_comment_id
 				INNER JOIN users AS reply_users ON reply_users.user_id = replies.user_id
@@ -548,15 +622,49 @@ http_response_code($status);
 		<?php if (can_access_moderation()): ?>
 			<a href="moderation.php">Moderation</a>
 		<?php endif; ?>
-		<a href="login.php"><?= $isSignedIn ? 'Account' : 'Sign in' ?></a>
+		<?= account_nav_link() ?>
 	</nav>
 	<main class="home-page">
 		<header class="home-heading">
 			<p class="home-eyebrow">A community for the beautiful game</p>
-			<h1><?= $postViewRequested && $posts !== [] ? 'Post by @' . escape_html((string) $posts[0]['username']) : ($profileUser !== null ? 'Posts by @' . escape_html((string) $profileUser['username']) : 'Women\'s Football Community') ?></h1>
+			<?php if ($profileUser === null): ?>
+				<h1><?= $postViewRequested && $posts !== [] ? 'Post by @' . escape_html((string) $posts[0]['username']) : 'Women\'s Football Community' ?></h1>
+			<?php endif; ?>
 			<?php if ($postViewRequested): ?>
 				<p><a href="<?= $profileUser !== null ? 'home.php?user_id=' . (int) $profileUser['user_id'] : ($posts !== [] ? 'home.php?user_id=' . (int) $posts[0]['user_id'] : 'home.php') ?>">Back to posts</a></p>
 			<?php elseif ($profileUser !== null): ?>
+				<div class="public-profile">
+					<?php if (is_string($profileUser['profile_image_path']) && $profileUser['profile_image_path'] !== ''): ?>
+						<img class="profile-avatar" src="<?= escape_html((string) $profileUser['profile_image_path']) ?>" alt="<?= escape_html((string) ($profileUser['display_name'] ?: $profileUser['username'])) ?>'s profile picture">
+					<?php else: ?>
+						<div class="profile-avatar profile-avatar-placeholder" aria-hidden="true"><?= escape_html(strtoupper(substr((string) $profileUser['username'], 0, 1))) ?></div>
+					<?php endif; ?>
+					<div class="public-profile-details">
+						<?php if (is_string($profileUser['display_name']) && $profileUser['display_name'] !== ''): ?>
+							<h2><?= escape_html((string) $profileUser['display_name']) ?></h2>
+						<?php endif; ?>
+						<p class="profile-username">@<?= escape_html((string) $profileUser['username']) ?></p>
+						<?php if (is_string($profileUser['bio']) && $profileUser['bio'] !== ''): ?>
+							<p class="profile-bio"><?= nl2br(escape_html((string) $profileUser['bio'])) ?></p>
+						<?php endif; ?>
+						<div class="profile-facts">
+							<?php if (is_string($profileUser['favorite_team']) && $profileUser['favorite_team'] !== ''): ?>
+								<p><strong>Favorite team</strong> <?= escape_html((string) $profileUser['favorite_team']) ?></p>
+							<?php endif; ?>
+							<?php if (is_string($profileUser['location']) && $profileUser['location'] !== ''): ?>
+								<p><strong>Location</strong> <?= escape_html((string) $profileUser['location']) ?></p>
+							<?php endif; ?>
+						</div>
+					</div>
+				</div>
+				<nav class="profile-activity-menu" aria-label="View profile activity">
+					<a class="<?= $profileActivity === 'posts' ? 'active' : '' ?>"<?= $profileActivity === 'posts' ? ' aria-current="page"' : '' ?> href="home.php?user_id=<?= (int) $profileUser['user_id'] ?>&amp;activity=posts">Posts</a>
+					<a class="<?= $profileActivity === 'reposts' ? 'active' : '' ?>"<?= $profileActivity === 'reposts' ? ' aria-current="page"' : '' ?> href="home.php?user_id=<?= (int) $profileUser['user_id'] ?>&amp;activity=reposts">Reposts</a>
+					<a class="<?= $profileActivity === 'comments' ? 'active' : '' ?>"<?= $profileActivity === 'comments' ? ' aria-current="page"' : '' ?> href="home.php?user_id=<?= (int) $profileUser['user_id'] ?>&amp;activity=comments">Comments</a>
+				</nav>
+				<?php if ($isSignedIn && $profileUserId === (int) $_SESSION['user_id']): ?>
+					<p><a href="profile.php?edit=1">Edit your profile</a></p>
+				<?php endif; ?>
 				<p><a href="home.php">Back to the community feed</a></p>
 			<?php else: ?>
 			<p>Share the moments, matches, and conversations you love with fans everywhere.</p>
@@ -598,11 +706,80 @@ http_response_code($status);
 			<div class="home-feed-heading">
 				<div>
 					<p class="home-eyebrow">From the community</p>
-					<h2 id="feed-heading"><?= $postViewRequested ? 'Post and comments' : ($profileUser !== null ? 'Posts by @' . escape_html((string) $profileUser['username']) : ($profileViewRequested ? 'Account posts' : 'Latest posts')) ?></h2>
+					<h2 id="feed-heading"><?= $postViewRequested ? 'Post and comments' : ($profileUser !== null ? ucfirst($profileActivity) : ($profileViewRequested ? 'Account posts' : 'Latest posts')) ?></h2>
 				</div>
 			</div>
-			<?php if ($posts === [] && (!$profileViewRequested || $profileUser !== null)): ?>
-				<p class="empty-feed"><?php if ($profileUser !== null): ?>@<?= escape_html((string) $profileUser['username']) ?> hasn't shared any posts yet.<?php else: ?>No posts yet. <?= $isSignedIn ? 'Be the first to start the conversation.' : 'Check back soon for community updates.' ?><?php endif; ?></p>
+			<?php if ($profileUser !== null && $profileActivity === 'comments'): ?>
+				<?php if ($profileComments === []): ?>
+					<p class="empty-feed">@<?= escape_html((string) $profileUser['username']) ?> hasn't commented on any posts yet.</p>
+				<?php else: ?>
+					<div class="profile-comment-list">
+						<?php foreach ($profileComments as $profileComment): ?>
+							<?php
+							$isReply = $profileComment['parent_comment_id'] !== null;
+							$showReplyContext = $isReply && $profileComment['parent_user_id'] !== null;
+							$contextText = $showReplyContext
+								? $profileComment['parent_comment_preview']
+								: $profileComment['post_content'];
+							$contextTruncated = $showReplyContext
+								? (bool) $profileComment['parent_comment_truncated']
+								: (bool) $profileComment['post_content_truncated'];
+							$contextMediaType = $showReplyContext
+								? $profileComment['parent_comment_media_type']
+								: $profileComment['post_media_type'];
+							$contextUserId = $showReplyContext
+								? $profileComment['parent_user_id']
+								: $profileComment['post_author_user_id'];
+							$contextUsername = $showReplyContext
+								? $profileComment['parent_username']
+								: $profileComment['post_author_username'];
+							$contextDisplayName = $showReplyContext
+								? $profileComment['parent_display_name']
+								: null;
+							$contextLabel = $showReplyContext ? 'Replying to' : 'Comment on post by';
+							$commentUrl = 'home.php?post_id=' . (int) $profileComment['post_id']
+								. '#comment-' . (int) $profileComment['comment_id'];
+							?>
+							<article class="profile-comment-card is-openable"
+								tabindex="0"
+								aria-label="Open comment by @<?= escape_html((string) $profileUser['username']) ?> on a post by @<?= escape_html((string) $profileComment['post_author_username']) ?>"
+								data-post-url="<?= escape_html($commentUrl) ?>">
+								<section class="profile-comment-context" aria-label="<?= escape_html($contextLabel) ?>">
+									<p class="profile-comment-context-label"><?= escape_html($contextLabel) ?>
+										<?php if ($showReplyContext && is_string($contextDisplayName) && $contextDisplayName !== ''): ?>
+											<strong><?= escape_html($contextDisplayName) ?></strong>
+										<?php endif; ?>
+										<?php if ($contextUserId !== null && is_string($contextUsername)): ?>
+											<a href="home.php?user_id=<?= (int) $contextUserId ?>">@<?= escape_html($contextUsername) ?></a>
+										<?php endif; ?>
+									</p>
+									<?php if (is_string($contextText) && $contextText !== ''): ?>
+										<p class="profile-comment-context-text"><?= nl2br(escape_html((string) $contextText)) ?><?= $contextTruncated ? '…' : '' ?></p>
+									<?php elseif (is_string($contextMediaType)): ?>
+										<p class="profile-comment-context-text"><?= $contextMediaType === 'video' ? 'Shared a video' : 'Shared a photo' ?></p>
+									<?php else: ?>
+										<p class="profile-comment-context-text">Original post</p>
+									<?php endif; ?>
+								</section>
+								<div class="profile-comment-own">
+									<p class="profile-comment-meta">
+										<span>Comment by @<?= escape_html((string) $profileUser['username']) ?></span>
+										<time datetime="<?= escape_html((string) $profileComment['created_at']) ?>"><?= escape_html(date('M j, Y \a\t g:i a', strtotime((string) $profileComment['created_at']))) ?></time>
+									</p>
+									<?php if (is_string($profileComment['content']) && $profileComment['content'] !== ''): ?>
+										<p class="profile-comment-content"><?= nl2br(escape_html((string) $profileComment['content'])) ?></p>
+									<?php endif; ?>
+									<?php if (is_string($profileComment['media_path']) && $profileComment['media_path'] !== ''): ?>
+										<p class="profile-comment-attachment"><?= $profileComment['media_type'] === 'video' ? 'Shared a video' : 'Shared a photo' ?></p>
+									<?php endif; ?>
+									<a class="profile-comment-open-link" href="<?= escape_html($commentUrl) ?>">Open comment</a>
+								</div>
+							</article>
+						<?php endforeach; ?>
+					</div>
+				<?php endif; ?>
+			<?php elseif ($posts === [] && (!$profileViewRequested || $profileUser !== null)): ?>
+				<p class="empty-feed"><?php if ($profileUser !== null): ?>@<?= escape_html((string) $profileUser['username']) ?> <?= $profileActivity === 'reposts' ? 'hasn\'t reposted anything yet.' : 'hasn\'t shared any posts yet.' ?><?php else: ?>No posts yet. <?= $isSignedIn ? 'Be the first to start the conversation.' : 'Check back soon for community updates.' ?><?php endif; ?></p>
 			<?php elseif ($posts !== []): ?>
 				<div class="post-list">
 					<?php foreach ($posts as $post): ?>
@@ -615,10 +792,39 @@ http_response_code($status);
 						?>
 						<article class="post-card<?= $postViewRequested ? '' : ' is-openable' ?>" id="<?= escape_html($feedItemKey) ?>"<?= $postViewRequested ? '' : ' tabindex="0" aria-label="Open post by @' . escape_html((string) $post['username']) . '" data-post-url="home.php?post_id=' . $postId . '"' ?>>
 							<?php if ($post['feed_type'] === 'repost'): ?>
-								<p class="post-repost-attribution"><a class="profile-link" href="home.php?user_id=<?= (int) $post['reposter_user_id'] ?>"><?= escape_html((string) $post['reposter_username']) ?></a> reposted</p>
+								<p class="post-repost-attribution">
+									<a class="post-author-avatar-link" href="home.php?user_id=<?= (int) $post['reposter_user_id'] ?>" aria-label="View @<?= escape_html((string) $post['reposter_username']) ?>'s profile">
+										<?php if (is_string($post['reposter_profile_image_path']) && $post['reposter_profile_image_path'] !== ''): ?>
+											<img class="post-author-avatar" src="<?= escape_html((string) $post['reposter_profile_image_path']) ?>" alt="" loading="lazy">
+										<?php else: ?>
+											<span class="post-author-avatar post-author-avatar-placeholder" aria-hidden="true"><?= escape_html(strtoupper(substr((string) $post['reposter_username'], 0, 1))) ?></span>
+										<?php endif; ?>
+									</a>
+									<span class="post-repost-byline">
+										<?php if (is_string($post['reposter_display_name']) && $post['reposter_display_name'] !== ''): ?>
+											<span class="post-author-display-name"><?= escape_html((string) $post['reposter_display_name']) ?></span>
+										<?php endif; ?>
+										<a class="profile-link" href="home.php?user_id=<?= (int) $post['reposter_user_id'] ?>">@<?= escape_html((string) $post['reposter_username']) ?></a>
+										<span>reposted</span>
+									</span>
+								</p>
 							<?php endif; ?>
 							<header class="post-author">
-								<a class="profile-link" href="home.php?user_id=<?= (int) $post['user_id'] ?>"><?= escape_html((string) $post['username']) ?></a>
+								<div class="post-author-identity">
+									<a class="post-author-avatar-link" href="home.php?user_id=<?= (int) $post['user_id'] ?>" aria-label="View @<?= escape_html((string) $post['username']) ?>'s profile">
+										<?php if (is_string($post['profile_image_path']) && $post['profile_image_path'] !== ''): ?>
+											<img class="post-author-avatar" src="<?= escape_html((string) $post['profile_image_path']) ?>" alt="" loading="lazy">
+										<?php else: ?>
+											<span class="post-author-avatar post-author-avatar-placeholder" aria-hidden="true"><?= escape_html(strtoupper(substr((string) $post['username'], 0, 1))) ?></span>
+										<?php endif; ?>
+									</a>
+									<span class="post-author-names">
+										<?php if (is_string($post['display_name']) && $post['display_name'] !== ''): ?>
+											<span class="post-author-display-name"><?= escape_html((string) $post['display_name']) ?></span>
+										<?php endif; ?>
+										<a class="profile-link" href="home.php?user_id=<?= (int) $post['user_id'] ?>">@<?= escape_html((string) $post['username']) ?></a>
+									</span>
+								</div>
 								<time datetime="<?= escape_html((string) $post['feed_created_at']) ?>"><?= escape_html(date('M j, Y \a\t g:i a', strtotime((string) $post['feed_created_at']))) ?></time>
 							</header>
 							<div class="post-open-content">
@@ -683,28 +889,29 @@ http_response_code($status);
 			<?php endif; ?>
 		</section>
 	</main>
-	<?php if (!$postViewRequested): ?>
-		<script>
-			document.querySelectorAll('.post-card.is-openable').forEach((postCard) => {
-				const openPost = () => {
-					window.location.href = postCard.dataset.postUrl;
-				};
+	<script>
+		document.querySelectorAll('.post-card.is-openable, .profile-comment-card.is-openable, .comment-card.is-openable').forEach((openableCard) => {
+			const openCard = () => {
+				window.location.href = openableCard.dataset.postUrl;
+			};
 
-				postCard.addEventListener('click', (event) => {
-					if (event.target.closest('a, button, input, textarea, select, video, audio, form, [contenteditable="true"]')) {
-						return;
-					}
-					openPost();
-				});
-
-				postCard.addEventListener('keydown', (event) => {
-					if (event.target === postCard && event.key === 'Enter') {
-						event.preventDefault();
-						openPost();
-					}
-				});
+			openableCard.addEventListener('click', (event) => {
+				if (event.target.closest('a, button, input, textarea, select, video, audio, form, [contenteditable="true"]')) {
+					return;
+				}
+				if (openableCard.matches('.comment-card') && event.target.closest('.comment-card.is-openable') !== openableCard) {
+					return;
+				}
+				openCard();
 			});
-		</script>
-	<?php endif; ?>
+
+			openableCard.addEventListener('keydown', (event) => {
+				if (event.target === openableCard && (event.key === 'Enter' || event.key === ' ')) {
+					event.preventDefault();
+					openCard();
+				}
+			});
+		});
+	</script>
 </body>
 </html>
