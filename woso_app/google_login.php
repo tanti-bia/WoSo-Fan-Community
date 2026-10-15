@@ -4,6 +4,11 @@ declare(strict_types=1);
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/google_oauth.php';
 
+if (!GOOGLE_SIGN_IN_ENABLED) {
+	header('Location: login.php', true, 303);
+	exit;
+}
+
 $config = google_oauth_config();
 if ($config === null) {
 	http_response_code(503);

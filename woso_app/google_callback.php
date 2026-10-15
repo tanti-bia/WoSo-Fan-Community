@@ -5,6 +5,11 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/database.php';
 require_once __DIR__ . '/google_oauth.php';
 
+if (!GOOGLE_SIGN_IN_ENABLED) {
+	header('Location: login.php', true, 303);
+	exit;
+}
+
 $state = isset($_GET['state']) && is_string($_GET['state']) ? $_GET['state'] : '';
 $expectedState = $_SESSION['google_oauth_state'] ?? '';
 $nonce = $_SESSION['google_oauth_nonce'] ?? '';

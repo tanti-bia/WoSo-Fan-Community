@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+const GOOGLE_SIGN_IN_ENABLED = false;
+
 function google_oauth_config(): ?array
 {
 	$clientId = getenv('WOSO_GOOGLE_CLIENT_ID');

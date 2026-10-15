@@ -612,6 +612,7 @@ http_response_code($status);
 	<link rel="stylesheet" href="styles.css">
 	<script src="image_viewer.js" defer></script>
 	<script src="back_button.js" defer></script>
+	<script src="upload_preview.js" defer></script>
 </head>
 <body>
 	<nav class="topnav<?= $postViewRequested ? ' post-view-nav' : '' ?>" aria-label="Main navigation">

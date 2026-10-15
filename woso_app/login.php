@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/database.php';
+require_once __DIR__ . '/google_oauth.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_SESSION['user_id'])) {
 	header('Location: profile.php');
@@ -104,7 +105,12 @@ http_response_code($status);
 				<button class="auth-button" type="submit">Sign in</button>
 			</form>
 			<p class="auth-intro">Or sign in with</p>
-			<a class="auth-button google-button" href="google_login.php?redirect=<?= rawurlencode(auth_return_target()) ?>">Continue with Google</a>
+			<?php if (GOOGLE_SIGN_IN_ENABLED): ?>
+				<a class="auth-button google-button" href="google_login.php?redirect=<?= rawurlencode(auth_return_target()) ?>">Continue with Google</a>
+			<?php else: ?>
+				<button class="auth-button google-button" type="button" disabled>Continue with Google</button>
+				<p class="auth-intro" role="status">Google sign-in is temporarily unavailable.</p>
+			<?php endif; ?>
 			<p class="auth-register-link">New here? <a href="register.php?redirect=<?= rawurlencode(auth_return_target()) ?>">Create an account</a></p>
 		<?php endif; ?>
 	</main>

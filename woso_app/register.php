@@ -7,21 +7,17 @@ require_once __DIR__ . '/database.php';
 $error = '';
 $username = '';
 $email = '';
-$accountType = 'Member';
 $status = 200;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	$username = trim(post_string('username'));
 	$email = strtolower(trim(post_string('email')));
-	$accountType = post_string('account_type');
 	$password = post_string('password');
 	$confirmPassword = post_string('confirm_password');
 
 	if (!has_valid_csrf_token()) {
 		$error = 'Your session expired. Please try again.';
 		$status = 400;
-	} elseif (!in_array($accountType, ['Member', 'Moderator'], true)) {
-		$error = 'Choose a valid account type.';
 	} elseif (!preg_match('/^[A-Za-z0-9_]{3,30}$/D', $username)) {
 		$error = 'Choose a username of 3 to 30 letters, numbers, or underscores.';
 	} elseif (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 254) {
@@ -46,13 +42,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 			]);
 
 			$userId = (int) $database->lastInsertId();
-			if ($accountType === 'Moderator') {
-				$request = $database->prepare(
-					'INSERT INTO moderator_requests (user_id) VALUES (:user_id)'
-				);
-				$request->execute(['user_id' => $userId]);
-			}
-
 			$database->commit();
 			sign_in_user([
 				'user_id' => $userId,
@@ -93,7 +82,7 @@ http_response_code($status);
 	<main class="auth-card">
 		<a class="auth-home-link" href="home.html">Women's Football Community</a>
 		<h1>Create an account</h1>
-		<p class="auth-intro">Moderator access requests must be approved by an administrator. You will start with a Member account.</p>
+		<p class="auth-intro">New accounts start with Member access. You can request Moderator access from your profile after signing in.</p>
 		<?php if ($error !== ''): ?>
 			<p class="auth-message auth-error" role="alert"><?= escape_html($error) ?></p>
 		<?php endif; ?>
@@ -104,11 +93,6 @@ http_response_code($status);
 			<input id="username" name="username" type="text" autocomplete="username" minlength="3" maxlength="30" pattern="[A-Za-z0-9_]+" value="<?= escape_html($username) ?>" required>
 			<label for="email">Email address</label>
 			<input id="email" name="email" type="email" autocomplete="email" maxlength="254" value="<?= escape_html($email) ?>" required>
-			<label for="account-type">Account type</label>
-			<select id="account-type" name="account_type" required>
-				<option value="Member"<?= $accountType === 'Member' ? ' selected' : '' ?>>Member</option>
-				<option value="Moderator"<?= $accountType === 'Moderator' ? ' selected' : '' ?>>Request Moderator access</option>
-			</select>
 			<label for="password">Password</label>
 			<input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required>
 			<label for="confirm-password">Confirm password</label>

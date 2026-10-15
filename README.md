@@ -6,7 +6,10 @@ Page: Home
 Functionalities and features: A public feed of community posts with text and photo/video media; the feed shows comment counts, and opening a post shows its comments. Signed-in members can publish, like, comment, and repost, while visitors can browse.
 
 Page: Match center
-Functionalities and features: Match details, scores, and a discussion thread
+Functionalities and features: Example fixtures sorted by kickoff, with mutually
+exclusive Live / Upcoming and Finished views. The first live match (or nearest
+upcoming match when none are live) is featured. Current example data is static
+and does not use a live scores API.
 
 Page: Community
 Functionalities and features: Discussions grouped by team, league, or topic
@@ -116,8 +119,8 @@ repository into `C:\xampp\htdocs\WoSo-Fan-Community`, start Apache and MySQL,
 and open `http://localhost/WoSo-Fan-Community/`. Local XAMPP defaults are for
 development only.
 
-Home and Community are available to visitors. The Match Center is currently
-unavailable. Polls, Predictions, and Notifications are viewable while signed
+Home, Community, and the example-fixture Match Center are available to visitors.
+Polls, Predictions, and Notifications are viewable while signed
 out; visitors can browse Polls and Predictions but must sign in to participate.
 Profile requires an account, and Moderation requires a Moderator or
 Administrator account.
@@ -164,6 +167,9 @@ Signed-in users can publish text posts and attach one JPEG, PNG, GIF,
 or WebP photo, or one MP4, WebM, or MOV video (up to 25 MB). Uploaded media is
 stored in `woso_app/uploads/posts` (or `uploads/posts` when deployed at the
 site document root); ensure the PHP account can write to this directory.
+Before submitting a photo or video on a post, comment, reply, or profile, users
+can preview it. Photos can be zoomed and repositioned before the selected crop
+is uploaded; video uploads include playback controls for preview.
 Signed-in users can like and repost posts and comments (both
 can be undone), and add comments or nested replies. Comments support the same
 text/photo/video content as posts. Recent comments, reaction counts, and
@@ -182,6 +188,9 @@ hosted site, use its HTTPS URL, for example
 `WOSO_GOOGLE_REDIRECT_URI` in the PHP environment on the host. Keep the client
 secret private. Google sign-in creates new Member accounts and can link an
 existing account only when Google confirms the same email address.
+Google sign-in is currently disabled; to restore it later, set
+`GOOGLE_SIGN_IN_ENABLED` to `true` in `woso_app/google_oauth.php` after OAuth
+credentials and callback configuration are ready.
 
 For an existing database, add the Google account identifier column before using
 Google sign-in:
@@ -210,8 +219,8 @@ port 3306, database `woso_community`, user `root`, and an empty password. Config
 `WOSO_DB_PASSWORD` in the PHP server environment to use different connection
 settings. Do not use the local defaults in a production deployment.
 
-Registration lets users choose Member or request Moderator access. Every account
-is created with the Member role; moderator requests are recorded in the
+Registration creates every account with the Member role. Signed-in Members can
+request Moderator access from their profile; requests are recorded in the
 `moderator_requests` table and elevated roles must be granted by an administrator.
 The Moderation link is shown only to signed-in moderators and administrators, and
 the moderation route checks the role even when opened directly. Passwords are
