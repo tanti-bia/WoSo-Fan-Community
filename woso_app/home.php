@@ -610,22 +610,22 @@ http_response_code($status);
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title><?= $profileUser !== null ? escape_html((string) $profileUser['username']) . ' - Posts' : 'Women\'s Football - Home' ?></title>
 	<link rel="stylesheet" href="styles.css">
+	<script src="image_viewer.js" defer></script>
+	<script src="back_button.js" defer></script>
 </head>
 <body>
-	<?php if (!$postViewRequested): ?>
-		<nav class="topnav" aria-label="Main navigation">
-			<a class="active" aria-current="page" href="home.php">Home</a>
-			<a href="matches.php">Match Center</a>
-			<a href="community.html">Community</a>
-			<a href="polls.php">Polls</a>
-			<a href="predictions.php">Predictions</a>
-			<?= notifications_nav_link() ?>
-			<?php if (can_access_moderation()): ?>
-				<a href="moderation.php">Moderation</a>
-			<?php endif; ?>
-			<?= account_nav_link() ?>
-		</nav>
-	<?php endif; ?>
+	<nav class="topnav<?= $postViewRequested ? ' post-view-nav' : '' ?>" aria-label="Main navigation">
+		<a class="active" aria-current="page" href="home.php">Home</a>
+		<a href="matches.php">Match Center</a>
+		<a href="community.html">Community</a>
+		<a href="polls.php">Polls</a>
+		<a href="predictions.php">Predictions</a>
+		<?= notifications_nav_link() ?>
+		<?php if (can_access_moderation()): ?>
+			<a href="moderation.php">Moderation</a>
+		<?php endif; ?>
+		<?= account_nav_link() ?>
+	</nav>
 	<main class="home-page">
 		<?php if (!$postViewRequested): ?>
 			<header class="home-heading">
@@ -666,7 +666,6 @@ http_response_code($status);
 					<?php if ($isSignedIn && $profileUserId === (int) $_SESSION['user_id']): ?>
 						<p><a href="profile.php?edit=1">Edit your profile</a></p>
 					<?php endif; ?>
-					<p><a href="home.php">Back to the community feed</a></p>
 				<?php else: ?>
 				<p>Share the moments, matches, and conversations you love with fans everywhere.</p>
 				<?php endif; ?>
@@ -895,33 +894,7 @@ http_response_code($status);
 			<?php endif; ?>
 		</section>
 	</main>
-	<dialog class="image-viewer" aria-label="Enlarged post photo">
-		<button class="image-viewer-close" type="button" aria-label="Close enlarged photo">&times;</button>
-		<img class="image-viewer-photo" alt="">
-	</dialog>
 	<script>
-		const imageViewer = document.querySelector('.image-viewer');
-		const imageViewerPhoto = imageViewer.querySelector('.image-viewer-photo');
-
-		document.querySelectorAll('.post-image-button').forEach((imageButton) => {
-			imageButton.addEventListener('click', () => {
-				const postPhoto = imageButton.querySelector('.post-media');
-				imageViewerPhoto.src = postPhoto.src;
-				imageViewerPhoto.alt = postPhoto.alt;
-				imageViewer.showModal();
-			});
-		});
-
-		imageViewer.querySelector('.image-viewer-close').addEventListener('click', () => {
-			imageViewer.close();
-		});
-
-		imageViewer.addEventListener('click', (event) => {
-			if (event.target === imageViewer) {
-				imageViewer.close();
-			}
-		});
-
 		document.querySelectorAll('.post-card.is-openable, .profile-comment-card.is-openable, .comment-card.is-openable').forEach((openableCard) => {
 			const openCard = () => {
 				window.location.href = openableCard.dataset.postUrl;

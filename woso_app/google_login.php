@@ -15,6 +15,7 @@ if ($config === null) {
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<title>Google sign-in unavailable</title>
 		<link rel="stylesheet" href="styles.css">
+		<script src="back_button.js" defer></script>
 	</head>
 	<body>
 		<main class="auth-card">

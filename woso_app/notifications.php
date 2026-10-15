@@ -56,6 +56,8 @@ http_response_code($status);
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>Women's Football - Notifications</title>
 	<link rel="stylesheet" href="styles.css">
+	<script src="image_viewer.js" defer></script>
+	<script src="back_button.js" defer></script>
 </head>
 <body>
 	<nav class="topnav" aria-label="Main navigation">
