@@ -6,9 +6,10 @@ Page: Home
 Functionalities and features: A public feed of community posts with text and photo/video media; the feed shows comment counts, and opening a post shows its comments. Signed-in members can publish, like, comment, and repost, while visitors can browse.
 
 Page: Match center
-Functionalities and features: Live, upcoming, and recently finished fixtures
-from the configured women's competitions, sorted by kickoff. Fixtures and live
-scores are supplied by RapidAPI.
+Functionalities and features: Live when available, upcoming, and recently
+finished fixtures from the configured women's competitions, sorted by kickoff.
+Fixtures and results are supplied by TheSportsDB's free API, which does not
+guarantee live score updates.
 
 Page: Community
 Functionalities and features: Discussions grouped by team, league, or topic
@@ -104,12 +105,15 @@ MySQL database with an external provider before deploying.
    environment variables. Add the HTTPS callback URL
    `https://<your-render-domain>/google_callback.php` to the OAuth client's
    authorized redirect URIs. Keep the client secret private.
-8. To enable live fixtures, set `WOSO_RAPIDAPI_KEY` to a RapidAPI key for
-   `free-api-live-football-data` and configure
-   `WOSO_RAPIDAPI_LEAGUE_IDS` with comma-separated women's competition IDs.
-   The Blueprint defaults to the WSL, Liga F, Frauen-Bundesliga, and Première
-   Ligue IDs (`9227,9907,9676,9677`); edit the value to choose the competitions
-   your API plan supports. Do not commit the API key.
+8. Match Center defaults to the NWSL, English WSL, Liga F, Première Ligue,
+   Italy Serie A Women, Germany Women's Bundesliga, Sweden Damallsvenskan,
+   Norway Toppserien, and Women's Champions League. To change the competitions,
+   set `WOSO_THESPORTSDB_LEAGUE_IDS` to a comma-separated list of TheSportsDB
+   league IDs. Find IDs in TheSportsDB's
+   [league browser](https://www.thesportsdb.com/browse_leagues) or through its
+   free `search_all_leagues.php` endpoint. The app uses TheSportsDB's free API
+   key and does not require a paid API key. Free API data is cached; live score
+   updates are not guaranteed.
 
 The container installs PHP 8.4 with PDO MySQL and verifies the built-in
 Fileinfo extension; it sets upload limits above the app's 25 MB per-file limit.
@@ -177,10 +181,10 @@ CREATE TABLE IF NOT EXISTS football_match_cache
 ```
 
 Match Center and Predictions read the same cached fixture snapshot. The shared
-snapshot is refreshed at most every 15 minutes; the provider's full league
-schedule is cached for 24 hours, and the current-day score feed for 15 minutes.
-This keeps page visits from making duplicate API calls. Configure the API key
-and league IDs in the PHP server environment before loading either page.
+snapshot is refreshed at most every 15 minutes; TheSportsDB league schedules
+and daily events are cached to limit API requests. This keeps page visits from
+making duplicate API calls. Configure the league IDs in the PHP server
+environment before loading either page.
 
 PHP pages must be served through a PHP-enabled web server; opening them
 directly as files does not run the account backend.

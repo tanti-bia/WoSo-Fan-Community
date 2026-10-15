@@ -21,7 +21,5 @@ services:
         sync: false
       - key: WOSO_DB_PASSWORD
         sync: false
-      - key: WOSO_RAPIDAPI_KEY
-        sync: false
-      - key: WOSO_RAPIDAPI_LEAGUE_IDS
-        value: "9227,9907,9676,9677"
+      - key: WOSO_THESPORTSDB_LEAGUE_IDS
+        value: "4521,4849,5106,5203,5205,5204,5209,5208,4889"

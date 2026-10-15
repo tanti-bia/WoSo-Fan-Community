@@ -51,7 +51,7 @@ try {
 		<header class="match-center-heading">
 			<p class="home-eyebrow">Fixtures and results</p>
 			<h1>Match Center</h1>
-			<p>Live scores, upcoming fixtures, and recent results from the competitions you follow.</p>
+			<p>Live match information when available, upcoming fixtures, and recent results from the competitions you follow.</p>
 		</header>
 
 		<?php if ($matchWarning !== ''): ?>
@@ -103,7 +103,7 @@ try {
 			</section>
 		<?php endif; ?>
 
-		<p class="match-attribution">Fixtures and scores are provided by RapidAPI and shared with Predictions. Data is cached to reduce API requests.</p>
+		<p class="match-attribution">Fixtures and results are provided by <a href="https://www.thesportsdb.com/" target="_blank" rel="noopener noreferrer">TheSportsDB</a> and shared with Predictions. Data is cached to reduce API requests.</p>
 	</main>
 </body>
 </html>
