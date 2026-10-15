@@ -1028,35 +1028,25 @@ p
   border-left: 5px solid #b42318;
 }
 
-.match-card-heading
+.match-card-top
 {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
   gap: 12px;
 }
 
-.match-card-heading .match-league
+.match-card-top .match-league
 {
+  grid-column: 1;
   color: #526357;
   font-weight: bold;
 }
 
-.match-status-badge
+.match-card-top .match-time
 {
-  padding: 4px 9px;
-  border-radius: 999px;
-  background-color: #e3f0e5;
-  color: #285536;
-  font-size: 0.75rem;
-  font-weight: bold;
-  text-transform: uppercase;
-}
-
-.match-status-badge.is-live
-{
-  background-color: #b42318;
-  color: #fff;
+  grid-column: 2;
+  text-align: center;
 }
 
 .match-featured-list
@@ -1125,6 +1115,18 @@ p
 {
   font-size: 0.85rem;
   font-weight: normal;
+}
+
+.match-status
+{
+  margin-top: 10px !important;
+  text-align: center;
+}
+
+.match-status.is-live
+{
+  color: #b42318 !important;
+  font-weight: bold;
 }
 
 .match-meta

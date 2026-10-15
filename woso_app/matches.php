@@ -99,36 +99,37 @@ $remainingLiveAndUpcoming = $featuredMatch === null
 	));
 
 $formatMatchDate = static fn (DateTimeImmutable $date): string => $date->format('D, M j · g:i A T');
-$renderMatchCard = static function (array $match, bool $featured = false) use ($formatMatchDate): void {
+$renderMatchCard = static function (array $match, bool $featured = false) use ($formatMatchDate, $now): void {
 	$isLive = $match['status'] === 'live';
-	$statusLabel = match ($match['status']) {
-		'live' => 'LIVE',
-		'finished' => 'Finished',
-		default => 'Upcoming',
-	};
+	$statusLabel = $match['status'];
+	$hasScore = isset($match['home_score'], $match['away_score']);
+	$liveMinute = $isLive
+		? max(1, (int) floor(($now->getTimestamp() - $match['kickoff']->getTimestamp()) / 60))
+		: null;
 	?>
 	<li class="match-card<?= $featured ? ' match-card-featured' : '' ?><?= $isLive ? ' is-live' : '' ?>">
-		<div class="match-card-heading">
+		<div class="match-card-top">
 			<p class="match-league"><?= escape_html($match['competition']) ?></p>
-			<span class="match-status-badge<?= $isLive ? ' is-live' : '' ?>"><?= escape_html($statusLabel) ?></span>
+			<p class="match-time">
+				<?php if ($isLive): ?>
+					<span><?= (int) $liveMinute ?>'</span>
+				<?php else: ?>
+					<time datetime="<?= escape_html($match['kickoff']->format(DateTimeInterface::ATOM)) ?>">
+						<?= escape_html($formatMatchDate($match['kickoff'])) ?>
+					</time>
+				<?php endif; ?>
+			</p>
 		</div>
 		<p class="match-teams">
 			<span class="match-home-team"><?= escape_html($match['home']) ?></span>
 			<span class="match-score">
-				<?= isset($match['home_score'], $match['away_score'])
+				<?= $hasScore
 					? (int) $match['home_score'] . ' – ' . (int) $match['away_score']
 					: 'vs' ?>
 			</span>
 			<span class="match-away-team"><?= escape_html($match['away']) ?></span>
 		</p>
-		<p class="match-time">
-			<time datetime="<?= escape_html($match['kickoff']->format(DateTimeInterface::ATOM)) ?>">
-				<?= escape_html($formatMatchDate($match['kickoff'])) ?>
-			</time>
-			<?php if ($isLive): ?>
-				<span> · In progress</span>
-			<?php endif; ?>
-		</p>
+		<p class="match-status<?= $isLive ? ' is-live' : '' ?>"><?= escape_html($statusLabel) ?></p>
 	</li>
 	<?php
 };
