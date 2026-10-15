@@ -108,26 +108,28 @@ $renderMatchCard = static function (array $match, bool $featured = false) use ($
 	<li class="match-card<?= $featured ? ' match-card-featured' : '' ?><?= $isLive ? ' is-live' : '' ?>">
 		<div class="match-card-top">
 			<p class="match-league"><?= escape_html($match['competition']) ?></p>
-			<p class="match-time">
-				<?php if ($isLive): ?>
-					<span><?= (int) $liveMinute ?>'</span>
-				<?php else: ?>
-					<time datetime="<?= escape_html($match['kickoff']->format(DateTimeInterface::ATOM)) ?>">
-						<?= escape_html($formatMatchDate($match['kickoff'])) ?>
-					</time>
-				<?php endif; ?>
-			</p>
 		</div>
 		<p class="match-teams">
 			<span class="match-home-team"><?= escape_html($match['home']) ?></span>
-			<span class="match-score">
-				<?= $hasScore
-					? (int) $match['home_score'] . ' – ' . (int) $match['away_score']
-					: 'vs' ?>
+			<span class="match-center-details">
+				<span class="match-time">
+					<?php if ($isLive): ?>
+						<?= (int) $liveMinute ?>'
+					<?php else: ?>
+						<time datetime="<?= escape_html($match['kickoff']->format(DateTimeInterface::ATOM)) ?>">
+							<?= escape_html($formatMatchDate($match['kickoff'])) ?>
+						</time>
+					<?php endif; ?>
+				</span>
+				<span class="match-score">
+					<?= $hasScore
+						? (int) $match['home_score'] . ' – ' . (int) $match['away_score']
+						: 'vs' ?>
+				</span>
+				<span class="match-status<?= $isLive ? ' is-live' : '' ?>"><?= escape_html($statusLabel) ?></span>
 			</span>
 			<span class="match-away-team"><?= escape_html($match['away']) ?></span>
 		</p>
-		<p class="match-status<?= $isLive ? ' is-live' : '' ?>"><?= escape_html($statusLabel) ?></p>
 	</li>
 	<?php
 };

@@ -1030,23 +1030,13 @@ p
 
 .match-card-top
 {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: start;
-  gap: 12px;
+  text-align: left;
 }
 
 .match-card-top .match-league
 {
-  grid-column: 1;
   color: #526357;
   font-weight: bold;
-}
-
-.match-card-top .match-time
-{
-  grid-column: 2;
-  text-align: center;
 }
 
 .match-featured-list
@@ -1107,6 +1097,7 @@ p
   display: grid;
   justify-items: center;
   gap: 4px;
+  min-width: 9rem;
   text-align: center;
 }
 
@@ -1119,7 +1110,6 @@ p
 
 .match-status
 {
-  margin-top: 10px !important;
   text-align: center;
 }
 
