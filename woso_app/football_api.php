@@ -5,7 +5,7 @@ function football_api_league_ids(): array
 {
 	$value = getenv('WOSO_RAPIDAPI_LEAGUE_IDS');
 	if ($value === false || trim($value) === '') {
-		return [];
+		throw new RuntimeException('Match data is not configured. Set WOSO_RAPIDAPI_LEAGUE_IDS to the women\'s competition IDs you want to show.');
 	}
 
 	$leagueIds = [];
@@ -76,17 +76,17 @@ function football_api_cached_response(string $url, int $extendTtl = 0): ?array
 
 function football_api_cached_request(string $url, int $cacheTtl, bool $extendCachedTtl = false): array
 {
+	$cacheDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'woso-football-cache';
+	$cachedResponse = football_api_cached_response($url, $extendCachedTtl ? $cacheTtl : 0);
+	if ($cachedResponse !== null) {
+		return $cachedResponse;
+	}
 	$apiKey = getenv('WOSO_RAPIDAPI_KEY');
 	if ($apiKey === false || trim($apiKey) === '') {
 		throw new RuntimeException('Match data is not configured. Set WOSO_RAPIDAPI_KEY on the PHP server.');
 	}
 
 	$apiHost = 'free-api-live-football-data.p.rapidapi.com';
-	$cacheDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'woso-football-cache';
-	$cachedResponse = football_api_cached_response($url, $extendCachedTtl ? $cacheTtl : 0);
-	if ($cachedResponse !== null) {
-		return $cachedResponse;
-	}
 	$cachePath = $cacheDirectory . DIRECTORY_SEPARATOR . hash('sha256', $url) . '.json';
 
 	if (!is_dir($cacheDirectory) && !mkdir($cacheDirectory, 0700, true) && !is_dir($cacheDirectory)) {
@@ -147,7 +147,7 @@ function football_api_matches_for_date(string $date): array
 	$url = 'https://' . $apiHost . '/football-get-matches-by-date-and-league?'
 		. http_build_query(['date' => str_replace('-', '', $date)]);
 	$today = (new DateTimeImmutable('today'))->format('Y-m-d');
-	$cacheTtl = $date < $today ? 2592000 : ($date === $today ? 300 : 3600);
+	$cacheTtl = $date < $today ? 2592000 : ($date === $today ? 900 : 3600);
 
 	return football_api_cached_request($url, $cacheTtl, $date < $today);
 }
@@ -158,7 +158,7 @@ function football_api_cached_matches_for_date(string $date): ?array
 	$url = 'https://' . $apiHost . '/football-get-matches-by-date-and-league?'
 		. http_build_query(['date' => str_replace('-', '', $date)]);
 	$today = (new DateTimeImmutable('today'))->format('Y-m-d');
-	$cacheTtl = $date < $today ? 2592000 : ($date === $today ? 300 : 3600);
+	$cacheTtl = $date < $today ? 2592000 : ($date === $today ? 900 : 3600);
 
 	return football_api_cached_response($url, $date < $today ? $cacheTtl : 0);
 }
@@ -346,9 +346,104 @@ function football_match_date_time(array $fixture): ?DateTimeImmutable
 	}
 
 	try {
-		return new DateTimeImmutable($utcTime);
+		return (new DateTimeImmutable($utcTime))->setTimezone(new DateTimeZone(date_default_timezone_get()));
 	} catch (Exception $exception) {
 		error_log('WoSo match data warning: provider returned an invalid match date.');
 		return null;
 	}
+}
+
+/**
+ * @return array{fixtures: list<array>, warning: ?string}
+ */
+function football_api_shared_fixtures(PDO $database): array
+{
+	$leagueIds = football_api_league_ids();
+	$cacheKey = hash('sha256', implode(',', $leagueIds));
+	$cacheQuery = $database->prepare(
+		'SELECT fixtures_json, fetched_at
+		FROM football_match_cache
+		WHERE cache_key = :cache_key'
+	);
+	$cacheQuery->execute(['cache_key' => $cacheKey]);
+	$cachedRow = $cacheQuery->fetch();
+	$cachedFixtures = null;
+	$cachedAt = 0;
+
+	if ($cachedRow !== false) {
+		$cachedAt = (int) $cachedRow['fetched_at'];
+		try {
+			$decodedFixtures = json_decode((string) $cachedRow['fixtures_json'], true, 512, JSON_THROW_ON_ERROR);
+			if (is_array($decodedFixtures) && array_is_list($decodedFixtures)) {
+				$cachedFixtures = $decodedFixtures;
+			} else {
+				error_log('WoSo match data warning: the shared fixture cache has an unsupported format.');
+			}
+		} catch (JsonException $exception) {
+			error_log('WoSo match data warning: unable to decode the shared fixture cache.');
+		}
+	}
+
+	if ($cachedFixtures !== null && $cachedAt >= time() - 900) {
+		return ['fixtures' => $cachedFixtures, 'warning' => null];
+	}
+
+	try {
+		$fixtures = [];
+		foreach ($leagueIds as $leagueId) {
+			$leagueMatches = football_api_all_matches_for_league($leagueId);
+			foreach (football_api_league_fixtures($leagueMatches, $leagueId) as $fixture) {
+				$fixtures[football_match_fixture_key($fixture)] = $fixture;
+			}
+		}
+
+		$today = (new DateTimeImmutable('today'))->format('Y-m-d');
+		$todayFixtures = football_api_fixtures(football_api_matches_for_date($today), $leagueIds);
+		foreach ($todayFixtures as $fixture) {
+			$fixtures[football_match_fixture_key($fixture)] = $fixture;
+		}
+		$fixtures = array_values($fixtures);
+		$fixturesJson = json_encode($fixtures, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+
+		$storeQuery = $database->prepare(
+			'INSERT INTO football_match_cache (cache_key, fixtures_json, fetched_at)
+			VALUES (:cache_key, :fixtures_json, :fetched_at)
+			ON DUPLICATE KEY UPDATE
+				fixtures_json = VALUES(fixtures_json),
+				fetched_at = VALUES(fetched_at)'
+		);
+		try {
+			$storeQuery->execute([
+				'cache_key' => $cacheKey,
+				'fixtures_json' => $fixturesJson,
+				'fetched_at' => time(),
+			]);
+		} catch (PDOException $exception) {
+			error_log('WoSo match data warning: unable to save the shared fixture cache. ' . $exception->getMessage());
+			return [
+				'fixtures' => $fixtures,
+				'warning' => 'Fixtures loaded, but could not be saved for reuse. Check database permissions.',
+			];
+		}
+
+		return ['fixtures' => $fixtures, 'warning' => null];
+	} catch (RuntimeException $exception) {
+		if ($cachedFixtures === null) {
+			throw $exception;
+		}
+
+		error_log('WoSo match data warning: fixture refresh failed; serving the shared cached fixtures. ' . $exception->getMessage());
+		return [
+			'fixtures' => $cachedFixtures,
+			'warning' => 'Match data could not be refreshed. Showing the last saved fixtures.',
+		];
+	} catch (JsonException $exception) {
+		throw new RuntimeException('The football service returned match data that could not be saved.', 0, $exception);
+	}
+}
+
+function football_match_is_cancelled(array $fixture): bool
+{
+	$status = $fixture['status'] ?? [];
+	return ($status['cancelled'] ?? false) === true;
 }

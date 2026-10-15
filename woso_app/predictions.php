@@ -1,8 +1,31 @@
 <?php
+declare(strict_types=1);
+
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/database.php';
+require_once __DIR__ . '/football_api.php';
+require_once __DIR__ . '/match_view.php';
+
+$matchError = '';
+$matchWarning = '';
+$upcomingMatches = [];
+try {
+	$matchData = football_api_shared_fixtures(database_connection());
+	$matchGroups = football_match_groups($matchData['fixtures'], new DateTimeImmutable('now'));
+	$upcomingMatches = $matchGroups['upcoming'];
+	$matchWarning = $matchData['warning'] ?? '';
+} catch (PDOException $exception) {
+	error_log('WoSo predictions match cache database error: ' . $exception->getMessage());
+	http_response_code(503);
+	$matchError = 'Match data storage is unavailable. Check the match cache table in the database setup.';
+} catch (RuntimeException $exception) {
+	error_log('WoSo predictions match data error: ' . $exception->getMessage());
+	http_response_code(503);
+	$matchError = $exception->getMessage();
+}
 ?>
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
@@ -17,24 +40,42 @@ require_once __DIR__ . '/auth.php';
 		<a href="matches.php">Match Center</a>
 		<a href="community.html">Community</a>
 		<a href="polls.php">Polls</a>
-	<a class="active" aria-current="page" href="predictions.php">Predictions</a>
-	<?= notifications_nav_link() ?>
-	<?php if (can_access_moderation()): ?>
-		<a href="moderation.php">Moderation</a>
-	<?php endif; ?>
-	<?= account_nav_link() ?>
-</nav>
+		<a class="active" aria-current="page" href="predictions.php">Predictions</a>
+		<?= notifications_nav_link() ?>
+		<?php if (can_access_moderation()): ?>
+			<a href="moderation.php">Moderation</a>
+		<?php endif; ?>
+		<?= account_nav_link() ?>
+	</nav>
 
-<main>
-	<h1>Predictions</h1>
-	<?php if (!isset($_SESSION['user_id'])): ?>
-		<p>Browse match predictions as a visitor. Sign in to submit your predictions.</p>
-		<p><a href="login.php?redirect=predictions.php">Sign in to make predictions</a></p>
-	<?php else: ?>
-		<p>Browse match predictions and submit your predictions while signed in.</p>
-	<?php endif; ?>
-	<img src="https://www.fcbarcelona.com/photo-resources/2026/05/23/ece710a5-9365-48f9-ac6e-05d5e69b17b4/_5DS4138.jpg?width=2400&height=1500" width="50%">
-	<p>Explore community predictions and forecast results for upcoming women's football matches.</p>
-</main>
+	<main class="predictions-page">
+		<p class="home-eyebrow">Make your matchday call</p>
+		<h1>Predictions</h1>
+		<p>See upcoming fixtures from the Match Center. Match data is shared from the same cache to keep API requests down.</p>
+
+		<?php if (!isset($_SESSION['user_id'])): ?>
+			<p class="visitor-prompt">Sign in to take part in predictions. <a href="login.php?redirect=predictions.php">Sign in</a></p>
+		<?php endif; ?>
+		<?php if ($matchWarning !== ''): ?>
+			<p class="auth-message auth-success" role="status"><?= escape_html($matchWarning) ?></p>
+		<?php endif; ?>
+		<?php if ($matchError !== ''): ?>
+			<p class="auth-message auth-error" role="alert"><?= escape_html($matchError) ?></p>
+		<?php else: ?>
+			<section aria-labelledby="prediction-fixtures-heading">
+				<h2 id="prediction-fixtures-heading">Upcoming matches</h2>
+				<?php if ($upcomingMatches !== []): ?>
+					<ul class="match-list">
+						<?php foreach ($upcomingMatches as $match): ?>
+							<?php render_football_match_card($match); ?>
+						<?php endforeach; ?>
+					</ul>
+				<?php else: ?>
+					<p class="match-empty">No upcoming matches were found in the next 14 days.</p>
+				<?php endif; ?>
+			</section>
+			<p class="prediction-note">Score prediction submissions are not available yet.</p>
+		<?php endif; ?>
+	</main>
 </body>
 </html>

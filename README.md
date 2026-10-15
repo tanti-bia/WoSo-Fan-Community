@@ -6,10 +6,9 @@ Page: Home
 Functionalities and features: A public feed of community posts with text and photo/video media; the feed shows comment counts, and opening a post shows its comments. Signed-in members can publish, like, comment, and repost, while visitors can browse.
 
 Page: Match center
-Functionalities and features: Example fixtures sorted by kickoff, with mutually
-exclusive Live / Upcoming and Finished views. The first live match (or nearest
-upcoming match when none are live) is featured. Current example data is static
-and does not use a live scores API.
+Functionalities and features: Live, upcoming, and recently finished fixtures
+from the configured women's competitions, sorted by kickoff. Fixtures and live
+scores are supplied by RapidAPI.
 
 Page: Community
 Functionalities and features: Discussions grouped by team, league, or topic
@@ -18,7 +17,8 @@ Page: Polls
 Functionalities and features: Vote on questions about matches and players
 
 Page: Predictions
-Functionalities and features: Submit score predictions before matches and earn points
+Functionalities and features: Browse upcoming matches using the shared Match
+Center fixture cache. Prediction submissions are not available yet.
 
 Page: User profiles
 Functionalities and features: Members can edit a display name, short bio,
@@ -104,6 +104,12 @@ MySQL database with an external provider before deploying.
    environment variables. Add the HTTPS callback URL
    `https://<your-render-domain>/google_callback.php` to the OAuth client's
    authorized redirect URIs. Keep the client secret private.
+8. To enable live fixtures, set `WOSO_RAPIDAPI_KEY` to a RapidAPI key for
+   `free-api-live-football-data` and configure
+   `WOSO_RAPIDAPI_LEAGUE_IDS` with comma-separated women's competition IDs.
+   The Blueprint defaults to the WSL, Liga F, Frauen-Bundesliga, and Première
+   Ligue IDs (`9227,9907,9676,9677`); edit the value to choose the competitions
+   your API plan supports. Do not commit the API key.
 
 The container installs PHP 8.4 with PDO MySQL and verifies the built-in
 Fileinfo extension; it sets upload limits above the app's 25 MB per-file limit.
@@ -119,14 +125,15 @@ repository into `C:\xampp\htdocs\WoSo-Fan-Community`, start Apache and MySQL,
 and open `http://localhost/WoSo-Fan-Community/`. Local XAMPP defaults are for
 development only.
 
-Home, Community, and the example-fixture Match Center are available to visitors.
+Home, Community, and Match Center are available to visitors.
 Polls, Predictions, and Notifications are viewable while signed
 out; visitors can browse Polls and Predictions but must sign in to participate.
 Profile requires an account, and Moderation requires a Moderator or
 Administrator account.
 
 Import `woso_app/database.sql` in phpMyAdmin to set up the account database,
-users table, and community feed tables. If the users table already exists, run
+users table, shared football fixture cache, and community feed tables. If the
+users table already exists, run
 the `CREATE TABLE IF NOT EXISTS` statements for `posts`, `post_likes`,
 `comments`, `comment_likes`, `comment_reposts`, `post_reposts`, and
 `notifications` from that file. For databases created before comment media,
@@ -154,6 +161,26 @@ ALTER TABLE notifications
 	ADD CONSTRAINT notifications_target_comment_fk
 		FOREIGN KEY (target_comment_id) REFERENCES comments (comment_id) ON DELETE CASCADE;
 ```
+
+For an existing database, create the shared football fixture cache table with:
+
+```sql
+CREATE TABLE IF NOT EXISTS football_match_cache
+(
+	cache_key CHAR(64) NOT NULL,
+	fixtures_json LONGTEXT NOT NULL,
+	fetched_at BIGINT UNSIGNED NOT NULL,
+	PRIMARY KEY (cache_key)
+) ENGINE=InnoDB
+	DEFAULT CHARACTER SET utf8mb4
+	COLLATE utf8mb4_unicode_ci;
+```
+
+Match Center and Predictions read the same cached fixture snapshot. The shared
+snapshot is refreshed at most every 15 minutes; the provider's full league
+schedule is cached for 24 hours, and the current-day score feed for 15 minutes.
+This keeps page visits from making duplicate API calls. Configure the API key
+and league IDs in the PHP server environment before loading either page.
 
 PHP pages must be served through a PHP-enabled web server; opening them
 directly as files does not run the account backend.

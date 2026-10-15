@@ -1,14 +1,14 @@
 :root
 {
   color-scheme: light;
-  --page-green: #e8f1e8;
-  --surface: #fbfdfb;
-  --surface-muted: #f1f7f1;
+  --page-green: #dcebdc;
+  --surface: #fcfefc;
+  --surface-muted: #eaf4ea;
   --green-900: #173d2b;
   --green-800: #214f36;
-  --green-700: #2d6645;
-  --green-600: #3d8057;
-  --green-300: #b7d2bb;
+  --green-700: #28643f;
+  --green-600: #38804f;
+  --green-300: #a9c9ae;
   --text: #23362a;
   --muted: #586b5e;
   --line: #ccddcf;
@@ -25,9 +25,15 @@ body
 {
   min-height: 100vh;
   margin: 0;
+  background-color: var(--page-green);
   background:
-    radial-gradient(ellipse at 8% 0%, rgb(94 204 145 / 18%), transparent 28rem),
-    linear-gradient(180deg, #edf5ed 0%, var(--page-green) 55%, #e3eee4 100%);
+    linear-gradient(90deg, transparent calc(50% - 1px), rgb(40 100 63 / 7%) 50%, transparent calc(50% + 1px)),
+    radial-gradient(circle at center, transparent 0 7.5rem, rgb(40 100 63 / 7%) 7.55rem 7.62rem, transparent 7.68rem),
+    linear-gradient(90deg, transparent 8%, rgb(40 100 63 / 6%) 8.1%, transparent 8.2%, transparent 91.8%, rgb(40 100 63 / 6%) 91.9%, transparent 92%),
+    linear-gradient(0deg, transparent 10%, rgb(40 100 63 / 6%) 10.1%, transparent 10.2%, transparent 89.8%, rgb(40 100 63 / 6%) 89.9%, transparent 90%),
+    radial-gradient(ellipse at 8% 0%, rgb(94 204 145 / 20%), transparent 28rem),
+    linear-gradient(180deg, #e4f1e4 0%, var(--page-green) 55%, #d6e8d7 100%);
+  background-attachment: fixed;
   color: var(--text);
   font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
   font-size: 16px;

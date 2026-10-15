@@ -21,3 +21,7 @@ services:
         sync: false
       - key: WOSO_DB_PASSWORD
         sync: false
+      - key: WOSO_RAPIDAPI_KEY
+        sync: false
+      - key: WOSO_RAPIDAPI_LEAGUE_IDS
+        value: "9227,9907,9676,9677"
