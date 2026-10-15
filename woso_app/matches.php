@@ -78,11 +78,17 @@ foreach ($matchExamples as $index => $example) {
 }
 
 $kickoffOrder = static fn (array $left, array $right): int => $left['kickoff'] <=> $right['kickoff'];
-$liveAndUpcoming = array_values(array_filter(
+$liveMatches = array_values(array_filter(
 	$matches,
-	static fn (array $match): bool => $match['status'] !== 'finished'
+	static fn (array $match): bool => $match['status'] === 'live'
 ));
-usort($liveAndUpcoming, $kickoffOrder);
+usort($liveMatches, $kickoffOrder);
+
+$upcomingMatches = array_values(array_filter(
+	$matches,
+	static fn (array $match): bool => $match['status'] === 'upcoming'
+));
+usort($upcomingMatches, $kickoffOrder);
 
 $finishedMatches = array_values(array_filter(
 	$matches,
@@ -90,18 +96,10 @@ $finishedMatches = array_values(array_filter(
 ));
 usort($finishedMatches, static fn (array $left, array $right): int => $right['kickoff'] <=> $left['kickoff']);
 
-$featuredMatch = $liveAndUpcoming[0] ?? null;
-$remainingLiveAndUpcoming = $featuredMatch === null
-	? []
-	: array_values(array_filter(
-		$liveAndUpcoming,
-		static fn (array $match): bool => $match['id'] !== $featuredMatch['id']
-	));
-
 $formatMatchDate = static fn (DateTimeImmutable $date): string => $date->format('D, M j · g:i A T');
 $renderMatchCard = static function (array $match, bool $featured = false) use ($formatMatchDate, $now): void {
 	$isLive = $match['status'] === 'live';
-	$statusLabel = $match['status'];
+	$statusLabel = ucfirst($match['status']);
 	$hasScore = isset($match['home_score'], $match['away_score']);
 	$liveMinute = $isLive
 		? max(1, (int) floor(($now->getTimestamp() - $match['kickoff']->getTimestamp()) / 60))
@@ -170,22 +168,26 @@ $renderMatchCard = static function (array $match, bool $featured = false) use ($
 		</div>
 
 		<section id="live-upcoming-panel" class="match-view-panel" role="tabpanel" aria-labelledby="live-upcoming-tab">
-			<?php if ($featuredMatch !== null): ?>
-				<h2><?= $featuredMatch['status'] === 'live' ? 'Live now' : 'Next kickoff' ?></h2>
+			<h2>Live</h2>
+			<?php if ($liveMatches !== []): ?>
 				<ul class="match-list match-featured-list">
-					<?php $renderMatchCard($featuredMatch, true); ?>
+					<?php foreach ($liveMatches as $index => $match): ?>
+						<?php $renderMatchCard($match, $index === 0); ?>
+					<?php endforeach; ?>
 				</ul>
+			<?php else: ?>
+				<p class="match-empty">No live example matches.</p>
 			<?php endif; ?>
 
-			<h2><?= $featuredMatch !== null && $featuredMatch['status'] === 'live' ? 'Other live and upcoming matches' : 'More upcoming matches' ?></h2>
-			<?php if ($remainingLiveAndUpcoming !== []): ?>
+			<h2>Upcoming</h2>
+			<?php if ($upcomingMatches !== []): ?>
 				<ul class="match-list">
-					<?php foreach ($remainingLiveAndUpcoming as $match): ?>
+					<?php foreach ($upcomingMatches as $match): ?>
 						<?php $renderMatchCard($match); ?>
 					<?php endforeach; ?>
 				</ul>
 			<?php else: ?>
-				<p class="match-empty">No live or upcoming example matches.</p>
+				<p class="match-empty">No upcoming example matches.</p>
 			<?php endif; ?>
 		</section>
 
