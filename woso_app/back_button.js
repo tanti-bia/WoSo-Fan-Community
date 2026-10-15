@@ -25,11 +25,15 @@
 	backBar.append(backButton);
 	const navigation = document.querySelector('.topnav');
 	const main = document.querySelector('main');
-	if (navigation) {
+	if (main) {
+		backBar.classList.add('is-in-content');
+		const heading = main.querySelector('.home-heading, .match-center-heading');
+		(heading || main).prepend(backBar);
+	} else if (navigation) {
+		backBar.classList.add('is-outside-content');
 		navigation.after(backBar);
-	} else if (main) {
-		main.before(backBar);
 	} else {
+		backBar.classList.add('is-outside-content');
 		document.body.prepend(backBar);
 	}
 })();
