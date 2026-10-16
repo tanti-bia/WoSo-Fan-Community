@@ -17,7 +17,7 @@ try {
 } catch (PDOException $exception) {
 	error_log('WoSo match data database error: ' . $exception->getMessage());
 	http_response_code(503);
-	$matchError = 'Match data storage is unavailable. Check the match cache table in the database setup.';
+	$matchError = 'Match data storage is unavailable. Check the database connection and confirm its user can create the football_match_cache table.';
 } catch (RuntimeException $exception) {
 	error_log('WoSo match data error: ' . $exception->getMessage());
 	http_response_code(503);
