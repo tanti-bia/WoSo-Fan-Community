@@ -42,9 +42,7 @@ try {
 		<a href="polls.php">Polls</a>
 		<a href="predictions.php">Predictions</a>
 		<?= notifications_nav_link() ?>
-		<?php if (can_access_moderation()): ?>
-			<a href="moderation.php">Moderation</a>
-		<?php endif; ?>
+		<?= moderation_nav_link() ?>
 		<?= account_nav_link() ?>
 	</nav>
 	<main class="match-center">

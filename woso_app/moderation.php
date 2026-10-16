@@ -29,13 +29,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 			}
 			if ($action === 'delete_post') {
 				if ($report['target_type'] !== 'post' || $report['post_id'] === null) {
-					throw new RuntimeException('Only a post report can delete a post.');
+					throw new RuntimeException('Only a reported post can be deleted here.');
+				}
+				$query = $database->prepare('SELECT user_id, status FROM posts WHERE post_id = :post_id FOR UPDATE');
+				$query->execute(['post_id' => $report['post_id']]);
+				$post = $query->fetch();
+				if (!$post || $post['status'] !== 'published') {
+					throw new RuntimeException('This post has already been deleted or is unavailable.');
 				}
 				$query = $database->prepare("UPDATE posts SET status = 'removed' WHERE post_id = :post_id");
 				$query->execute(['post_id' => $report['post_id']]);
+				$query = $database->prepare(
+					'INSERT INTO notifications (recipient_user_id, actor_user_id, post_id, target_type, notification_type)
+					VALUES (:recipient_user_id, :actor_user_id, :post_id, \'post\', \'post_removed\')'
+				);
+				$query->execute([
+					'recipient_user_id' => (int) $post['user_id'],
+					'actor_user_id' => (int) $_SESSION['user_id'],
+					'post_id' => (int) $report['post_id'],
+				]);
+				$query = $database->prepare(
+					"UPDATE reports
+					SET status = 'actioned', review_action = 'delete_post', reviewed_by = :reviewer, reviewed_at = UTC_TIMESTAMP()
+					WHERE target_type = 'post' AND post_id = :post_id AND status = 'pending'"
+				);
+				$query->execute([
+					'reviewer' => (int) $_SESSION['user_id'],
+					'post_id' => (int) $report['post_id'],
+				]);
 			} elseif (in_array($action, ['ban_user', 'temporary_block'], true)) {
-				if ($report['target_type'] !== 'user' || (int) $report['reported_user_id'] === (int) $_SESSION['user_id']) {
-					throw new RuntimeException('Only a user report can restrict a different account.');
+				if ((int) $report['reported_user_id'] === (int) $_SESSION['user_id']) {
+					throw new RuntimeException('This action cannot be applied to your own account.');
 				}
 				$query = $database->prepare("SELECT role FROM users WHERE user_id = :user_id FOR UPDATE");
 				$query->execute(['user_id' => $report['reported_user_id']]);
@@ -108,7 +132,7 @@ try {
 	<nav class="topnav" aria-label="Main navigation">
 		<a href="home.html">Home</a><a href="matches.php">Match Center</a><a href="community.html">Community</a>
 		<a href="polls.php">Polls</a><a href="predictions.php">Predictions</a><?= notifications_nav_link() ?>
-		<a class="active" aria-current="page" href="moderation.php">Moderation</a><?= account_nav_link() ?>
+		<?= moderation_nav_link(true) ?><?= account_nav_link() ?>
 	</nav>
 	<main class="moderation-page">
 		<header class="page-heading"><p class="home-eyebrow">Administrator tools</p><h1>Moderation reports</h1><p>Review reports and choose an action for the post or account.</p></header>
@@ -124,7 +148,17 @@ try {
 					<p><strong>Reason</strong><br><?= nl2br(escape_html((string) $report['reason'])) ?></p>
 					<?php if ($report['target_type'] === 'post'): ?>
 						<p class="moderation-target-content"><?= $report['post_content'] !== null && $report['post_content'] !== '' ? nl2br(escape_html((string) $report['post_content'])) : 'This post has no text.' ?></p>
-						<a href="home.php?post_id=<?= (int) $report['post_id'] ?>">Open post</a>
+						<?php if ($report['post_status'] === 'published'): ?>
+							<a href="home.php?post_id=<?= (int) $report['post_id'] ?>">Open post</a>
+							<form class="moderation-delete-form" method="post" action="moderation.php" onsubmit="return confirm('Delete this post and notify its author?')">
+							<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
+							<input type="hidden" name="report_id" value="<?= (int) $report['report_id'] ?>">
+							<input type="hidden" name="review_action" value="delete_post">
+							<button class="profile-logout-button" type="submit">Delete post and notify author</button>
+						</form>
+						<?php else: ?>
+							<p>This post has already been deleted.</p>
+						<?php endif; ?>
 					<?php else: ?><a href="home.php?user_id=<?= (int) $report['reported_user_id'] ?>">Open profile</a><?php endif; ?>
 					<form class="moderation-action-form" method="post" action="moderation.php">
 						<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
@@ -132,16 +166,35 @@ try {
 						<label for="action-<?= (int) $report['report_id'] ?>">Decision</label>
 						<select id="action-<?= (int) $report['report_id'] ?>" name="review_action">
 							<option value="none">Do nothing</option>
-							<?php if ($report['target_type'] === 'post'): ?><option value="delete_post">Delete post</option><?php else: ?>
-								<option value="ban_user">Ban user</option><option value="temporary_block">Block user temporarily</option><?php endif; ?>
+							<option value="temporary_block"><?= $report['target_type'] === 'post' ? 'Block user' : 'Block user temporarily' ?></option>
+							<option value="ban_user">Ban user</option>
 						</select>
-						<label for="days-<?= (int) $report['report_id'] ?>">Block length</label>
-						<select id="days-<?= (int) $report['report_id'] ?>" name="block_days"><option value="7">7 days</option><option value="30">30 days</option><option value="90">90 days</option><option value="365">365 days</option></select>
+						<div class="moderation-block-period" hidden>
+							<label for="days-<?= (int) $report['report_id'] ?>">Block length</label>
+							<select id="days-<?= (int) $report['report_id'] ?>" name="block_days" disabled>
+								<option value="1">1 day</option><option value="7">7 days</option><option value="30">30 days</option><option value="90">90 days</option><option value="365">365 days</option>
+							</select>
+						</div>
 						<button class="auth-button" type="submit">Save decision</button>
 					</form>
 				</article>
 			<?php endforeach; ?>
 		</div>
 	</main>
+	<script>
+		document.querySelectorAll('.moderation-action-form').forEach((form) => {
+			const action = form.querySelector('[name="review_action"]');
+			const period = form.querySelector('.moderation-block-period');
+			const days = form.querySelector('[name="block_days"]');
+			const updatePeriodVisibility = () => {
+				const shouldShow = action.value === 'temporary_block';
+				period.hidden = !shouldShow;
+				days.disabled = !shouldShow;
+				days.required = shouldShow;
+			};
+			action.addEventListener('change', updatePeriodVisibility);
+			updatePeriodVisibility();
+		});
+	</script>
 </body>
 </html>

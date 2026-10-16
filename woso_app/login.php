@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 			$database = database_connection();
 			$query = $database->prepare(
 				'SELECT user_id, username, email, password_hash, role, banned_at,
-				suspended_until > UTC_TIMESTAMP() AS is_suspended
+					TIMESTAMPDIFF(SECOND, UTC_TIMESTAMP(), suspended_until) AS seconds_remaining
 				FROM users
 				WHERE email = :email
 				LIMIT 1'
@@ -37,8 +37,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 			$user = $query->fetch();
 
 			if ($user && password_verify($password, $user['password_hash'])) {
-				if ($user['banned_at'] !== null || (int) $user['is_suspended'] === 1) {
-					$error = $user['banned_at'] !== null ? 'This account has been banned.' : 'This account is temporarily blocked.';
+				if ($user['banned_at'] !== null || (int) $user['seconds_remaining'] > 0) {
+					$error = $user['banned_at'] !== null
+						? 'This account has been banned.'
+						: temporary_block_message((int) $user['seconds_remaining']);
 				} else {
 					sign_in_user($user);
 					header('Location: ' . auth_return_target());
@@ -86,9 +88,7 @@ http_response_code($status);
 		<a href="polls.php">Polls</a>
 		<a href="predictions.php">Predictions</a>
 		<?= notifications_nav_link() ?>
-		<?php if (can_access_moderation()): ?>
-			<a href="moderation.php">Moderation</a>
-		<?php endif; ?>
+		<?= moderation_nav_link() ?>
 		<?= account_nav_link(true) ?>
 	</nav>
 	<main class="auth-card">

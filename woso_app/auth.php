@@ -96,21 +96,73 @@ function can_access_moderation(): bool
 	return ($_SESSION['role'] ?? '') === 'Administrator';
 }
 
+function temporary_block_message(int $secondsRemaining): string
+{
+	$totalMinutes = max(1, (int) ceil($secondsRemaining / 60));
+	$days = intdiv($totalMinutes, 1440);
+	$hours = intdiv($totalMinutes % 1440, 60);
+	$minutes = $totalMinutes % 60;
+	$parts = [];
+	foreach ([[$days, 'day'], [$hours, 'hour'], [$minutes, 'minute']] as [$value, $unit]) {
+		if ($value > 0) {
+			$parts[] = $value . ' ' . $unit . ($value === 1 ? '' : 's');
+		}
+	}
+	$wait = count($parts) > 1
+		? implode(', ', array_slice($parts, 0, -1)) . ' and ' . end($parts)
+		: $parts[0];
+
+	return 'This account is temporarily blocked. You can log in again in ' . $wait . '.';
+}
+
+function moderation_nav_link(bool $active = false): string
+{
+	if (!can_access_moderation()) {
+		return '';
+	}
+
+	$badge = '';
+	try {
+		require_once __DIR__ . '/database.php';
+		$count = (int) database_connection()
+			->query("SELECT COUNT(*) FROM reports WHERE status = 'pending'")
+			->fetchColumn();
+		if ($count > 0) {
+			$displayCount = $count > 99 ? '99+' : (string) $count;
+			$badge = '<span class="notification-badge" aria-label="' . escape_html($count . ' new reports') . '">'
+				. escape_html($displayCount) . '</span>';
+		}
+	} catch (PDOException $exception) {
+		error_log('WoSo moderation badge database error: ' . $exception->getMessage());
+	}
+
+	return '<a class="notification-nav-link' . ($active ? ' active' : '') . '"'
+		. ($active ? ' aria-current="page"' : '')
+		. ' href="moderation.php">Moderation' . $badge . '</a>';
+}
+
 function enforce_account_restrictions(): void
 {
+	static $checked = false;
+	if ($checked) {
+		return;
+	}
+	$checked = true;
 	if (!isset($_SESSION['user_id']) || !is_numeric($_SESSION['user_id'])) {
 		return;
 	}
 	require_once __DIR__ . '/database.php';
 	try {
 		$query = database_connection()->prepare(
-			'SELECT banned_at, suspended_until > UTC_TIMESTAMP() AS is_suspended FROM users WHERE user_id = :user_id LIMIT 1'
+			'SELECT banned_at, TIMESTAMPDIFF(SECOND, UTC_TIMESTAMP(), suspended_until) AS seconds_remaining
+			FROM users WHERE user_id = :user_id LIMIT 1'
 		);
 		$query->execute(['user_id' => (int) $_SESSION['user_id']]);
 		$account = $query->fetch();
-		if (!$account || $account['banned_at'] !== null || (int) $account['is_suspended'] === 1) {
+		if (!$account || $account['banned_at'] !== null || (int) $account['seconds_remaining'] > 0) {
 			$_SESSION['account_restriction_notice'] = !$account || $account['banned_at'] !== null
-				? 'This account has been banned.' : 'This account is temporarily blocked.';
+				? 'This account has been banned.'
+				: temporary_block_message((int) $account['seconds_remaining']);
 			unset($_SESSION['user_id'], $_SESSION['username'], $_SESSION['email'], $_SESSION['role']);
 			session_regenerate_id(true);
 		}
@@ -165,3 +217,5 @@ function notifications_nav_link(bool $active = false): string
 		. ($active ? ' aria-current="page"' : '')
 		. ' href="notifications.php">' . escape_html($label) . $badge . '</a>';
 }
+
+enforce_account_restrictions();

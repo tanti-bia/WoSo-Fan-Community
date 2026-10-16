@@ -201,7 +201,7 @@ CREATE TABLE IF NOT EXISTS notifications
 	comment_id BIGINT UNSIGNED NULL,
 	target_comment_id BIGINT UNSIGNED NULL,
 	target_type ENUM('post', 'comment') NOT NULL DEFAULT 'post',
-	notification_type ENUM('like', 'comment', 'repost') NOT NULL,
+	notification_type ENUM('like', 'comment', 'repost', 'post_removed') NOT NULL,
 	read_at TIMESTAMP NULL,
 	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	PRIMARY KEY (notification_id),

@@ -30,7 +30,7 @@ if (isset($_SESSION['user_id'])) {
 			INNER JOIN posts ON posts.post_id = notifications.post_id
 			LEFT JOIN comments ON comments.comment_id = notifications.comment_id
 			WHERE notifications.recipient_user_id = :recipient_user_id
-				AND posts.status = \'published\'
+				AND (posts.status = \'published\' OR notifications.notification_type = \'post_removed\')
 			ORDER BY notifications.created_at DESC, notifications.notification_id DESC
 			LIMIT 100'
 		);
@@ -67,9 +67,7 @@ http_response_code($status);
 		<a href="polls.php">Polls</a>
 		<a href="predictions.php">Predictions</a>
 		<?= notifications_nav_link(true) ?>
-		<?php if (can_access_moderation()): ?>
-			<a href="moderation.php">Moderation</a>
-		<?php endif; ?>
+		<?= moderation_nav_link() ?>
 		<?= account_nav_link() ?>
 	</nav>
 
@@ -94,6 +92,7 @@ http_response_code($status);
 				<?php foreach ($notifications as $notification): ?>
 					<?php
 					$actionText = match ([$notification['notification_type'], $notification['target_type']]) {
+						['post_removed', 'post'] => 'deleted your post after a moderation review.',
 						['like', 'comment'] => 'liked your comment.',
 						['repost', 'comment'] => 'reposted your comment.',
 						['comment', 'comment'] => 'replied to your comment.',
@@ -107,10 +106,14 @@ http_response_code($status);
 						: 'home.php#post-' . (int) $notification['post_id'];
 					?>
 					<li class="notification-card">
+						<?php if ($notification['notification_type'] === 'post_removed'): ?>
+							<p><strong><?= escape_html((string) $notification['actor_username']) ?></strong> <?= escape_html($actionText) ?></p>
+						<?php else: ?>
 						<a href="<?= escape_html($target) ?>">
 							<strong><?= escape_html((string) $notification['actor_username']) ?></strong>
 							<?= escape_html($actionText) ?>
 						</a>
+						<?php endif; ?>
 						<?php if (is_string($notification['comment_content']) && $notification['comment_content'] !== ''): ?>
 							<p class="notification-comment"><?= nl2br(escape_html((string) $notification['comment_content'])) ?></p>
 						<?php endif; ?>
