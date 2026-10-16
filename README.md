@@ -144,6 +144,13 @@ the `CREATE TABLE IF NOT EXISTS` statements for `posts`, `post_likes`,
 nested replies, and unread notification badges were added, first migrate the
 existing `comments` and `notifications` tables:
 
+If the Home feed or Match Center reports a database error, verify that MySQL or
+MariaDB is running and that PHP uses the intended database settings. To create
+tables missing from an existing database, re-run `woso_app/database.sql`; its
+`CREATE TABLE IF NOT EXISTS` statements preserve existing tables and data.
+In particular, the Home feed uses `post_reposts`, and Match Center and
+Predictions use `football_match_cache`.
+
 ```sql
 ALTER TABLE comments
 	MODIFY content TEXT NULL,

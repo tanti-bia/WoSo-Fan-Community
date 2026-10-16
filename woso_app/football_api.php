@@ -420,13 +420,20 @@ function football_api_shared_fixtures(PDO $database): array
 		return ['fixtures' => $fixtures, 'warning' => null];
 	} catch (RuntimeException $exception) {
 		if ($cachedFixtures === null) {
+			if (str_starts_with($exception->getMessage(), 'TheSportsDB ')) {
+				error_log('WoSo match data warning: TheSportsDB is unavailable and no shared fixture cache exists. ' . $exception->getMessage());
+				return [
+					'fixtures' => [],
+					'warning' => 'Live results unavailable. No matches have been saved yet; please try again later.',
+				];
+			}
 			throw $exception;
 		}
 
 		error_log('WoSo match data warning: fixture refresh failed; serving the shared cached fixtures. ' . $exception->getMessage());
 		return [
 			'fixtures' => $cachedFixtures,
-			'warning' => 'Match data could not be refreshed. Showing the last saved fixtures.',
+			'warning' => 'Live results unavailable. Showing matches from the last successful request.',
 		];
 	} catch (JsonException $exception) {
 		throw new RuntimeException('TheSportsDB returned match data that could not be saved.', 0, $exception);
