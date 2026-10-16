@@ -136,7 +136,7 @@ if ($isRequestingModerator) {
 	}
 }
 
-if (!$isEditing || $error !== '') {
+if (!$isEditing || $error !== '' || $_SERVER['REQUEST_METHOD'] !== 'POST') {
 	try {
 		$database = database_connection();
 		$query = $database->prepare(
@@ -150,7 +150,7 @@ if (!$isEditing || $error !== '') {
 			$profile['email'] = (string) $savedProfile['email'];
 			$profile['role'] = (string) $savedProfile['role'];
 			$profile['profile_image_path'] = $savedProfile['profile_image_path'];
-			if (!$isEditing) {
+			if (!$isEditing || $_SERVER['REQUEST_METHOD'] !== 'POST') {
 				$profile['display_name'] = (string) ($savedProfile['display_name'] ?? '');
 				$profile['bio'] = (string) ($savedProfile['bio'] ?? '');
 				$profile['favorite_team'] = (string) ($savedProfile['favorite_team'] ?? '');
