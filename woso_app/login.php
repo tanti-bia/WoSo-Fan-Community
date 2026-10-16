@@ -27,7 +27,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		try {
 			$database = database_connection();
 			$query = $database->prepare(
-				'SELECT user_id, username, email, password_hash, role
+				'SELECT user_id, username, email, password_hash, role, banned_at,
+				suspended_until > UTC_TIMESTAMP() AS is_suspended
 				FROM users
 				WHERE email = :email
 				LIMIT 1'
@@ -36,12 +37,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 			$user = $query->fetch();
 
 			if ($user && password_verify($password, $user['password_hash'])) {
-				sign_in_user($user);
-				header('Location: ' . auth_return_target());
-				exit;
+				if ($user['banned_at'] !== null || (int) $user['is_suspended'] === 1) {
+					$error = $user['banned_at'] !== null ? 'This account has been banned.' : 'This account is temporarily blocked.';
+				} else {
+					sign_in_user($user);
+					header('Location: ' . auth_return_target());
+					exit;
+				}
 			}
 
-			$error = 'The email or password is incorrect.';
+			if ($error === '') {
+				$error = 'The email or password is incorrect.';
+			}
 		} catch (PDOException $exception) {
 			error_log('WoSo login database error: ' . $exception->getMessage());
 			$error = 'Sign-in is temporarily unavailable. Please check the database setup and try again.';
@@ -54,6 +61,10 @@ if (isset($_GET['logged_out'])) {
 	$notice = 'You have been signed out.';
 } else {
 	$notice = '';
+}
+if (isset($_SESSION['account_restriction_notice']) && is_string($_SESSION['account_restriction_notice'])) {
+	$error = $_SESSION['account_restriction_notice'];
+	unset($_SESSION['account_restriction_notice']);
 }
 
 http_response_code($status);

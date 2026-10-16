@@ -132,8 +132,11 @@ development only.
 Home, Community, and Match Center are available to visitors.
 Polls, Predictions, and Notifications are viewable while signed
 out; visitors can browse Polls and Predictions but must sign in to participate.
-Profile requires an account, and Moderation requires a Moderator or
-Administrator account.
+Profile requires an account, and Moderation requires an Administrator account.
+Signed-in users can report posts and profiles with a required reason. Reports
+are reviewed in the administrator Moderation page; administrators can dismiss
+reports, remove reported posts, permanently ban accounts, or block accounts for
+up to 365 days.
 
 Import `woso_app/database.sql` in phpMyAdmin to set up the account database,
 users table, shared football fixture cache, and community feed tables. If the
@@ -150,6 +153,11 @@ tables missing from an existing database, re-run `woso_app/database.sql`; its
 `CREATE TABLE IF NOT EXISTS` statements preserve existing tables and data.
 In particular, the Home feed uses `post_reposts`, and Match Center and
 Predictions use `football_match_cache`.
+
+For an existing database, apply `woso_app/moderation_migration.sql` once before
+deploying this feature. It adds account restriction fields and the report queue.
+The migration intentionally uses a plain `CREATE TABLE` and `ALTER TABLE`, so
+do not run it a second time after it succeeds.
 
 ```sql
 ALTER TABLE comments

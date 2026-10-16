@@ -1,17 +1,17 @@
 :root
 {
   color-scheme: light;
-  --page-green: #dcebdc;
-  --surface: #fcfefc;
-  --surface-muted: #eaf4ea;
-  --green-900: #173d2b;
-  --green-800: #214f36;
-  --green-700: #28643f;
-  --green-600: #38804f;
-  --green-300: #a9c9ae;
-  --text: #23362a;
-  --muted: #586b5e;
-  --line: #ccddcf;
+  --page-green: #183e2a;
+  --surface: #f4f8f4;
+  --surface-muted: #e5eee6;
+  --green-900: #102e1e;
+  --green-800: #17422a;
+  --green-700: #1c5735;
+  --green-600: #2d7047;
+  --green-300: #77997d;
+  --text: #1c3023;
+  --muted: #506455;
+  --line: #c1d2c4;
   --shadow-soft: 0 10px 30px rgb(23 61 43 / 8%);
   --shadow-lift: 0 16px 36px rgb(23 61 43 / 13%);
 }
@@ -27,12 +27,12 @@ body
   margin: 0;
   background-color: var(--page-green);
   background:
-    linear-gradient(90deg, transparent calc(50% - 1px), rgb(40 100 63 / 7%) 50%, transparent calc(50% + 1px)),
-    radial-gradient(circle at center, transparent 0 7.5rem, rgb(40 100 63 / 7%) 7.55rem 7.62rem, transparent 7.68rem),
-    linear-gradient(90deg, transparent 8%, rgb(40 100 63 / 6%) 8.1%, transparent 8.2%, transparent 91.8%, rgb(40 100 63 / 6%) 91.9%, transparent 92%),
-    linear-gradient(0deg, transparent 10%, rgb(40 100 63 / 6%) 10.1%, transparent 10.2%, transparent 89.8%, rgb(40 100 63 / 6%) 89.9%, transparent 90%),
-    radial-gradient(ellipse at 8% 0%, rgb(94 204 145 / 20%), transparent 28rem),
-    linear-gradient(180deg, #e4f1e4 0%, var(--page-green) 55%, #d6e8d7 100%);
+    linear-gradient(90deg, transparent calc(50% - 1px), rgb(220 242 224 / 8%) 50%, transparent calc(50% + 1px)),
+    radial-gradient(circle at center, transparent 0 7.5rem, rgb(220 242 224 / 8%) 7.55rem 7.62rem, transparent 7.68rem),
+    linear-gradient(90deg, transparent 8%, rgb(220 242 224 / 7%) 8.1%, transparent 8.2%, transparent 91.8%, rgb(220 242 224 / 7%) 91.9%, transparent 92%),
+    linear-gradient(0deg, transparent 10%, rgb(220 242 224 / 7%) 10.1%, transparent 10.2%, transparent 89.8%, rgb(220 242 224 / 7%) 89.9%, transparent 90%),
+    radial-gradient(ellipse at 8% 0%, rgb(94 204 145 / 16%), transparent 28rem),
+    linear-gradient(180deg, #285a3b 0%, var(--page-green) 55%, #123522 100%);
   background-attachment: fixed;
   color: var(--text);
   font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
@@ -2397,6 +2397,157 @@ body > p
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+.report-details
+{
+	margin: 8px 0 14px;
+	color: var(--green-900);
+}
+
+.report-details summary
+{
+	width: fit-content;
+	cursor: pointer;
+	font-weight: 700;
+}
+
+.report-form,
+.moderation-action-form
+{
+	display: grid;
+	gap: 8px;
+	margin-top: 10px;
+}
+
+.report-form textarea,
+.moderation-action-form select
+{
+	width: 100%;
+	border: 1px solid var(--line);
+	border-radius: 10px;
+	background: var(--surface);
+	color: var(--text);
+	font: inherit;
+	padding: 10px 12px;
+}
+
+.report-form textarea
+{
+	min-height: 76px;
+	resize: vertical;
+}
+
+.report-profile-form
+{
+	max-width: 560px;
+	margin: 16px 0;
+}
+
+.moderation-page
+{
+	width: min(100% - 32px, 960px);
+	margin: 36px auto 72px;
+}
+
+.moderation-report-list
+{
+	display: grid;
+	gap: 16px;
+}
+
+.moderation-report-card
+{
+	padding: 22px;
+	border: 1px solid var(--line);
+	border-radius: 18px;
+	background: var(--surface);
+	box-shadow: 0 12px 32px rgb(0 0 0 / 12%);
+}
+
+.moderation-report-card h2
+{
+	margin: 6px 0 12px;
+}
+
+.moderation-target-content
+{
+	padding: 14px;
+	border-radius: 12px;
+	background: var(--surface-muted);
+	white-space: pre-wrap;
+}
+
+.moderation-action-form
+{
+	grid-template-columns: minmax(130px, 1fr) minmax(130px, 1fr) auto;
+	align-items: end;
+	margin-top: 18px;
+}
+
+.moderation-action-form label
+{
+	grid-row: 1;
+}
+
+.moderation-action-form select
+{
+	grid-row: 2;
+}
+
+.moderation-action-form button
+{
+	grid-column: 3;
+	grid-row: 1 / span 2;
+}
+
+@media (max-width: 620px)
+{
+	.moderation-action-form
+	{
+		grid-template-columns: 1fr;
+	}
+
+	.moderation-action-form label,
+	.moderation-action-form select,
+	.moderation-action-form button
+	{
+		grid-column: 1;
+		grid-row: auto;
+	}
+}
+
+.topnav
+{
+  border-color: rgb(119 153 125 / 45%);
+  background: rgb(16 46 30 / 92%);
+  box-shadow: 0 8px 24px rgb(8 25 15 / 30%);
+}
+
+.topnav.post-view-nav
+{
+  background-color: #102e1e;
+}
+
+.topnav a
+{
+  border-color: #426c4c;
+  background-color: #204a31;
+  color: #f0f6f0;
+}
+
+.topnav a:hover,
+.topnav a:focus-visible
+{
+  background-color: #2a5d3a;
+}
+
+.topnav a.active
+{
+  border-color: #52835c;
+  background-color: #347148;
+  color: #fff;
+  box-shadow: 0 4px 10px rgb(8 25 15 / 28%);
 }
 
 .page-back-bar

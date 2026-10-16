@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/database.php';
 require_once __DIR__ . '/comment_view.php';
+enforce_account_restrictions();
 
 const MAX_POST_CONTENT_LENGTH = 5000;
 const MAX_POST_MEDIA_SIZE = 25 * 1024 * 1024;
@@ -72,6 +73,18 @@ if (isset($_SESSION['home_notice']) && is_string($_SESSION['home_notice'])) {
 	unset($_SESSION['home_notice']);
 } else {
 	$notice = '';
+}
+if (isset($_SESSION['report_notice']) && is_string($_SESSION['report_notice'])) {
+	$notice = $_SESSION['report_notice'];
+	unset($_SESSION['report_notice']);
+}
+if (isset($_SESSION['report_error']) && is_string($_SESSION['report_error'])) {
+	$error = $_SESSION['report_error'];
+	unset($_SESSION['report_error']);
+}
+if (isset($_SESSION['account_restriction_notice']) && is_string($_SESSION['account_restriction_notice'])) {
+	$notice = $_SESSION['account_restriction_notice'];
+	unset($_SESSION['account_restriction_notice']);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -641,7 +654,7 @@ http_response_code($status);
 						<?php else: ?>
 							<div class="profile-avatar profile-avatar-placeholder" aria-hidden="true"><?= escape_html(strtoupper(substr((string) $profileUser['username'], 0, 1))) ?></div>
 						<?php endif; ?>
-						<div class="public-profile-details">
+										<div class="public-profile-details">
 							<?php if (is_string($profileUser['display_name']) && $profileUser['display_name'] !== ''): ?>
 								<h2><?= escape_html((string) $profileUser['display_name']) ?></h2>
 							<?php endif; ?>
@@ -657,8 +670,19 @@ http_response_code($status);
 									<p><strong>Location</strong> <?= escape_html((string) $profileUser['location']) ?></p>
 								<?php endif; ?>
 							</div>
-						</div>
-					</div>
+										</div>
+									</div>
+					<?php if ($isSignedIn && $profileUserId !== (int) $_SESSION['user_id']): ?>
+						<form class="report-form report-profile-form" action="report_action.php" method="post">
+							<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
+							<input type="hidden" name="target_type" value="user">
+							<input type="hidden" name="target_id" value="<?= (int) $profileUserId ?>">
+							<input type="hidden" name="return_to" value="<?= escape_html('home.php?user_id=' . $profileUserId) ?>">
+							<label for="report-profile-reason">Report this user</label>
+							<textarea id="report-profile-reason" name="reason" required maxlength="2000" placeholder="Explain why you are reporting this account"></textarea>
+							<button class="post-action" type="submit">Send report</button>
+						</form>
+					<?php endif; ?>
 					<nav class="profile-activity-menu" aria-label="View profile activity">
 						<a class="<?= $profileActivity === 'posts' ? 'active' : '' ?>"<?= $profileActivity === 'posts' ? ' aria-current="page"' : '' ?> href="home.php?user_id=<?= (int) $profileUser['user_id'] ?>&amp;activity=posts">Posts</a>
 						<a class="<?= $profileActivity === 'reposts' ? 'active' : '' ?>"<?= $profileActivity === 'reposts' ? ' aria-current="page"' : '' ?> href="home.php?user_id=<?= (int) $profileUser['user_id'] ?>&amp;activity=reposts">Reposts</a>
@@ -831,6 +855,20 @@ http_response_code($status);
 								</div>
 								<time datetime="<?= escape_html((string) $post['feed_created_at']) ?>"><?= escape_html(date('M j, Y \a\t g:i a', strtotime((string) $post['feed_created_at']))) ?></time>
 							</header>
+							<?php if ($isSignedIn && (int) $post['user_id'] !== (int) $_SESSION['user_id']): ?>
+								<details class="report-details">
+									<summary>Report post</summary>
+									<form class="report-form" action="report_action.php" method="post">
+										<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
+										<input type="hidden" name="target_type" value="post">
+										<input type="hidden" name="target_id" value="<?= $postId ?>">
+										<input type="hidden" name="return_to" value="<?= escape_html($postViewRequested ? 'home.php?post_id=' . $postId : 'home.php' . $profileRedirect) ?>">
+										<label for="report-post-reason-<?= $postId ?>">Why are you reporting this post?</label>
+										<textarea id="report-post-reason-<?= $postId ?>" name="reason" required maxlength="2000" placeholder="Describe the issue"></textarea>
+										<button class="post-action" type="submit">Send report</button>
+									</form>
+								</details>
+							<?php endif; ?>
 							<div class="post-open-content">
 								<?php if (is_string($post['content']) && $post['content'] !== ''): ?>
 									<p class="post-content"><?= nl2br(escape_html((string) $post['content'])) ?></p>
@@ -902,7 +940,7 @@ http_response_code($status);
 			};
 
 			openableCard.addEventListener('click', (event) => {
-				if (event.target.closest('a, button, input, textarea, select, video, audio, form, [contenteditable="true"]')) {
+				if (event.target.closest('a, button, input, textarea, select, video, audio, form, details, summary, [contenteditable="true"]')) {
 					return;
 				}
 				if (openableCard.matches('.comment-card') && event.target.closest('.comment-card.is-openable') !== openableCard) {

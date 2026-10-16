@@ -65,6 +65,7 @@ function auth_return_target(): string
 
 function require_signed_in(string $target): void
 {
+	enforce_account_restrictions();
 	if (isset($_SESSION['user_id'])) {
 		return;
 	}
@@ -92,7 +93,30 @@ function require_role(array $allowedRoles): void
 
 function can_access_moderation(): bool
 {
-	return in_array($_SESSION['role'] ?? '', ['Moderator', 'Administrator'], true);
+	return ($_SESSION['role'] ?? '') === 'Administrator';
+}
+
+function enforce_account_restrictions(): void
+{
+	if (!isset($_SESSION['user_id']) || !is_numeric($_SESSION['user_id'])) {
+		return;
+	}
+	require_once __DIR__ . '/database.php';
+	try {
+		$query = database_connection()->prepare(
+			'SELECT banned_at, suspended_until > UTC_TIMESTAMP() AS is_suspended FROM users WHERE user_id = :user_id LIMIT 1'
+		);
+		$query->execute(['user_id' => (int) $_SESSION['user_id']]);
+		$account = $query->fetch();
+		if (!$account || $account['banned_at'] !== null || (int) $account['is_suspended'] === 1) {
+			$_SESSION['account_restriction_notice'] = !$account || $account['banned_at'] !== null
+				? 'This account has been banned.' : 'This account is temporarily blocked.';
+			unset($_SESSION['user_id'], $_SESSION['username'], $_SESSION['email'], $_SESSION['role']);
+			session_regenerate_id(true);
+		}
+	} catch (PDOException $exception) {
+		error_log('WoSo account restriction check failed: ' . $exception->getMessage());
+	}
 }
 
 function account_nav_link(bool $active = false): string
