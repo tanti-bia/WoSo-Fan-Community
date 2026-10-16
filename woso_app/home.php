@@ -597,7 +597,7 @@ try {
 	}
 } catch (PDOException $exception) {
 	error_log('WoSo home feed database error: ' . $exception->getMessage());
-	$error = 'The community feed is temporarily unavailable. Please check the database setup and try again.';
+	$error = 'The community feed is temporarily unavailable. Check that MySQL is running, the database settings are correct, and the latest tables and migrations in database.sql have been applied.';
 	$status = 503;
 }
 
@@ -782,7 +782,7 @@ http_response_code($status);
 						<?php endforeach; ?>
 					</div>
 				<?php endif; ?>
-			<?php elseif ($posts === [] && (!$profileViewRequested || $profileUser !== null)): ?>
+			<?php elseif ($error === '' && $posts === [] && (!$profileViewRequested || $profileUser !== null)): ?>
 				<p class="empty-feed"><?php if ($profileUser !== null): ?>@<?= escape_html((string) $profileUser['username']) ?> <?= $profileActivity === 'reposts' ? 'hasn\'t reposted anything yet.' : 'hasn\'t shared any posts yet.' ?><?php else: ?>No posts yet. <?= $isSignedIn ? 'Be the first to start the conversation.' : 'Check back soon for community updates.' ?><?php endif; ?></p>
 			<?php elseif ($posts !== []): ?>
 				<div class="post-list">
