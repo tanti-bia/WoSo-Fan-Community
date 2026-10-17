@@ -1,0 +1,16 @@
+CREATE TABLE IF NOT EXISTS predictions
+(
+	user_id INT UNSIGNED NOT NULL,
+	event_id VARCHAR(64) NOT NULL,
+	home_score INT UNSIGNED NOT NULL,
+	away_score INT UNSIGNED NOT NULL,
+	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (user_id, event_id),
+	KEY predictions_event (event_id),
+	CONSTRAINT predictions_user_fk
+		FOREIGN KEY (user_id) REFERENCES users (user_id)
+		ON DELETE CASCADE
+) ENGINE=InnoDB
+	DEFAULT CHARACTER SET utf8mb4
+	COLLATE utf8mb4_unicode_ci;

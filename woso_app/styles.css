@@ -2474,6 +2474,103 @@ body > p
 	}
 }
 
+.predictions-page
+{
+	width: min(100% - 36px, 1000px);
+	margin: 34px auto 56px;
+	padding: clamp(22px, 4vw, 40px);
+	border: 1px solid var(--line);
+	border-radius: 22px;
+	background: var(--surface);
+	box-shadow: var(--shadow-soft);
+	color: var(--text);
+}
+
+.prediction-form
+{
+	display: grid;
+	gap: 14px;
+	margin: 22px 0 30px;
+	padding: 20px;
+	border: 1px solid var(--green-300);
+	border-radius: 16px;
+	background: var(--surface-muted);
+}
+
+.prediction-form h2,
+.prediction-form p
+{
+	margin: 0;
+}
+
+.prediction-selected-match
+{
+	color: var(--muted);
+	font-weight: 600;
+}
+
+.prediction-score-fields
+{
+	display: flex;
+	flex-wrap: wrap;
+	align-items: end;
+	gap: 14px;
+}
+
+.prediction-score-fields label
+{
+	display: grid;
+	gap: 6px;
+	color: var(--text);
+	font-weight: 600;
+}
+
+.prediction-score-fields input
+{
+	width: 120px;
+	min-height: 44px;
+	padding: 8px 10px;
+	border: 1px solid var(--green-300);
+	border-radius: 8px;
+	background: #fff;
+	color: var(--text);
+	font: inherit;
+}
+
+.prediction-form > button
+{
+	justify-self: start;
+}
+
+.prediction-match-card
+{
+	cursor: pointer;
+	transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.prediction-match-card:hover,
+.prediction-match-card:focus-visible,
+.prediction-match-card.is-prediction-selected
+{
+	border-color: var(--green-600);
+	box-shadow: 0 0 0 3px rgb(61 128 87 / 18%), var(--shadow-soft);
+	outline: none;
+}
+
+.prediction-match-card:hover
+{
+	transform: translateY(-1px);
+}
+
+.prediction-card-score
+{
+	margin-top: 12px !important;
+	padding-top: 10px;
+	border-top: 1px solid var(--line);
+	color: var(--green-800) !important;
+	font-weight: 700;
+}
+
 .report-details
 {
 	margin: 8px 0 14px;

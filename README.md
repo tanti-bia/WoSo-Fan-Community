@@ -67,7 +67,7 @@ user_favorites      user_id (FK), team_id (FK)
 polls               poll_id (PK), created_by (FK), question, end_date
 poll_options        option_id (PK), poll_id (FK), option_text
 votes               vote_id (PK), poll_id (FK), option_id (FK), user_id (FK)
-predictions         prediction_id (PK), match_id (FK), user_id (FK), predicted_home_score, predicted_away_score
+predictions         user_id (FK), event_id, home_score, away_score, created_at, updated_at
 reports             report_id (PK), reporter_id (FK), post_id (FK), reason, status
 
 5. Deploying to Render
@@ -206,6 +206,13 @@ is opened. TheSportsDB league schedules are cached to limit API requests. This
 keeps page visits from
 making duplicate API calls. Configure the league IDs in the PHP server
 environment before loading either page.
+
+Signed-in members can select an upcoming fixture on Predictions, enter a whole
+number of goals for both teams (including zero), and submit or update their
+score until kickoff. Each member has one saved prediction per fixture. The
+`predictions` table is created automatically when Predictions is opened; it is
+also included in `database.sql`. For an existing installation, the optional
+one-time SQL is in `woso_app/predictions_migration.sql`.
 
 PHP pages must be served through a PHP-enabled web server; opening them
 directly as files does not run the account backend.

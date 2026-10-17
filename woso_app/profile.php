@@ -260,7 +260,7 @@ http_response_code($status);
 					</dl>
 					<div class="profile-account-actions">
 						<a class="auth-button" href="profile.php?edit=1">Edit profile</a>
-						<a class="profile-secondary-button" href="home.php?user_id=<?= $userId ?>">View public profile</a>
+						<a class="auth-button" href="home.php?user_id=<?= $userId ?>">View public profile</a>
 						<form action="logout.php" method="post">
 							<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
 							<button class="profile-logout-button" type="submit">Log out</button>
