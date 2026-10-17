@@ -408,7 +408,7 @@ function football_api_shared_fixtures(PDO $database): array
 		}
 	}
 
-	if ($cachedFixtures !== null && $cachedAt >= time() - 900) {
+	if ($cachedFixtures !== null && $cachedAt >= time() - 300) {
 		return ['fixtures' => $cachedFixtures, 'warning' => null];
 	}
 
