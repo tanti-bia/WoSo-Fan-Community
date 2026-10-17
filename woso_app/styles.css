@@ -2399,6 +2399,53 @@ body > p
   }
 }
 
+.moderation-review-row
+{
+	margin-top: 20px;
+	padding-top: 16px;
+	border-top: 1px solid var(--line);
+}
+
+.moderation-review-row h3
+{
+	margin: 0 0 10px;
+	color: var(--green-900);
+}
+
+.post-review-form
+{
+	grid-template-columns: minmax(160px, 1fr) auto;
+}
+
+.post-review-form label
+{
+	grid-column: 1;
+	grid-row: 1;
+}
+
+.post-review-form select
+{
+	grid-column: 1;
+	grid-row: 2;
+}
+
+.post-review-form button
+{
+	grid-column: 2;
+	grid-row: 1 / span 2;
+}
+
+@media (max-width: 620px)
+{
+	.post-review-form label,
+	.post-review-form select,
+	.post-review-form button
+	{
+		grid-column: 1;
+		grid-row: auto;
+	}
+}
+
 .report-details
 {
 	margin: 8px 0 14px;
@@ -2635,4 +2682,38 @@ body > p
   {
     width: calc(100% - 24px);
   }
+}
+
+.post-review-form
+{
+	grid-template-columns: minmax(160px, 1fr) auto;
+}
+
+.post-review-form label
+{
+	grid-column: 1;
+	grid-row: 1;
+}
+
+.post-review-form select
+{
+	grid-column: 1;
+	grid-row: 2;
+}
+
+.post-review-form button
+{
+	grid-column: 2;
+	grid-row: 1 / span 2;
+}
+
+@media (max-width: 620px)
+{
+	.post-review-form label,
+	.post-review-form select,
+	.post-review-form button
+	{
+		grid-column: 1;
+		grid-row: auto;
+	}
 }

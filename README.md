@@ -159,9 +159,9 @@ deploying this feature. It adds account restriction fields and the report queue.
 The migration intentionally uses a plain `CREATE TABLE` and `ALTER TABLE`, so
 do not run it a second time after it succeeds.
 
-For existing databases, also apply `woso_app/post_removal_notification_migration.sql`
-once before deploying admin post deletion notifications. It adds the notification
-type used to tell post authors when an administrator removes their post.
+For an existing database where the original moderation migration has already
+been run, apply `woso_app/moderation_workflow_migration.sql` once. It adds
+independent post and user decisions to reports and enables post removal notices.
 
 ```sql
 ALTER TABLE comments

@@ -13,6 +13,12 @@ CREATE TABLE reports
 	reason VARCHAR(2000) NOT NULL,
 	status ENUM('pending', 'dismissed', 'actioned') NOT NULL DEFAULT 'pending',
 	review_action ENUM('none', 'delete_post', 'ban_user', 'temporary_block') NULL,
+	post_review_action ENUM('none', 'delete_post') NULL,
+	post_reviewed_by INT UNSIGNED NULL,
+	post_reviewed_at DATETIME NULL,
+	user_review_action ENUM('none', 'temporary_block', 'ban_user') NULL,
+	user_reviewed_by INT UNSIGNED NULL,
+	user_reviewed_at DATETIME NULL,
 	blocked_until DATETIME NULL,
 	reviewed_by INT UNSIGNED NULL,
 	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -24,5 +30,7 @@ CREATE TABLE reports
 	CONSTRAINT reports_reporter_fk FOREIGN KEY (reporter_id) REFERENCES users (user_id) ON DELETE CASCADE,
 	CONSTRAINT reports_post_fk FOREIGN KEY (post_id) REFERENCES posts (post_id) ON DELETE SET NULL,
 	CONSTRAINT reports_reported_user_fk FOREIGN KEY (reported_user_id) REFERENCES users (user_id) ON DELETE CASCADE,
-	CONSTRAINT reports_reviewer_fk FOREIGN KEY (reviewed_by) REFERENCES users (user_id) ON DELETE SET NULL
+	CONSTRAINT reports_reviewer_fk FOREIGN KEY (reviewed_by) REFERENCES users (user_id) ON DELETE SET NULL,
+	CONSTRAINT reports_post_reviewer_fk FOREIGN KEY (post_reviewed_by) REFERENCES users (user_id) ON DELETE SET NULL,
+	CONSTRAINT reports_user_reviewer_fk FOREIGN KEY (user_reviewed_by) REFERENCES users (user_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
