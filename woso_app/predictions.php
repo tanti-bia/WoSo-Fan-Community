@@ -33,7 +33,7 @@ try {
 		) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci'
 	);
 	$matchData = football_api_shared_fixtures($database);
-	$matchGroups = football_match_groups($matchData['fixtures'], new DateTimeImmutable('now'));
+	$matchGroups = football_match_groups($matchData['fixtures'], new DateTimeImmutable('now'), 14, null);
 	$upcomingMatches = $matchGroups['upcoming'];
 	$finishedMatches = $matchGroups['finished'];
 	$matchWarning = $matchData['warning'] ?? '';
@@ -193,7 +193,7 @@ try {
 						<?php endforeach; ?>
 					</ul>
 				<?php else: ?>
-					<p class="match-empty">No finished matches from the last 7 days.</p>
+					<p class="match-empty">No finished matches have been saved for these competitions yet.</p>
 				<?php endif; ?>
 			</section>
 		<?php endif; ?>

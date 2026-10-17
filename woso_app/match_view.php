@@ -1,13 +1,13 @@
 <?php
 declare(strict_types=1);
 
-function football_match_groups(array $fixtures, DateTimeImmutable $now, int $upcomingDays = 14): array
+function football_match_groups(array $fixtures, DateTimeImmutable $now, int $upcomingDays = 14, ?int $finishedDays = 7): array
 {
 	$live = [];
 	$upcoming = [];
 	$finished = [];
 	$upcomingLimit = $now->modify('+' . $upcomingDays . ' days');
-	$finishedLimit = $now->modify('-7 days');
+	$finishedLimit = $finishedDays === null ? null : $now->modify('-' . max(0, $finishedDays) . ' days');
 
 	foreach ($fixtures as $fixture) {
 		if (!is_array($fixture)
@@ -24,7 +24,7 @@ function football_match_groups(array $fixtures, DateTimeImmutable $now, int $upc
 
 		if (football_match_is_live($fixture)) {
 			$live[] = $fixture;
-		} elseif (football_match_is_finished($fixture) && $kickoff >= $finishedLimit) {
+		} elseif (football_match_is_finished($fixture) && ($finishedLimit === null || $kickoff >= $finishedLimit)) {
 			$finished[] = $fixture;
 		} elseif ($kickoff >= $now && $kickoff <= $upcomingLimit) {
 			$upcoming[] = $fixture;

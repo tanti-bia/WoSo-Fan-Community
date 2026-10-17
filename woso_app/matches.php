@@ -13,12 +13,12 @@ $matchError = '';
 $useLocalMatchTime = football_match_user_has_location();
 try {
 	$matchData = football_api_shared_fixtures(database_connection());
-	$matchGroups = football_match_groups($matchData['fixtures'], $now);
+	$matchGroups = football_match_groups($matchData['fixtures'], $now, 14, null);
 	$matchWarning = $matchData['warning'] ?? '';
 } catch (PDOException $exception) {
 	error_log('WoSo match data database error: ' . $exception->getMessage());
 	http_response_code(503);
-	$matchError = 'Match data storage is unavailable. Check the database connection and confirm its user can create the football_match_cache table.';
+	$matchError = 'Match data storage is unavailable. Check the database connection and confirm its user can create the match cache and finished match tables.';
 } catch (RuntimeException $exception) {
 	error_log('WoSo match data error: ' . $exception->getMessage());
 	http_response_code(503);
@@ -98,7 +98,7 @@ try {
 						<?php endforeach; ?>
 					</ul>
 				<?php else: ?>
-					<p class="match-empty">No finished matches from the last 7 days.</p>
+					<p class="match-empty">No finished matches have been saved for these competitions yet.</p>
 				<?php endif; ?>
 			</section>
 		<?php endif; ?>

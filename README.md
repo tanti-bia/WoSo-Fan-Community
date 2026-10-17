@@ -6,10 +6,10 @@ Page: Home
 Functionalities and features: A public feed of community posts with text and photo/video media; the feed shows comment counts, and opening a post shows its comments. Signed-in members can publish, like, comment, and repost, while visitors can browse.
 
 Page: Match center
-Functionalities and features: Live when available, upcoming, and recently
+Functionalities and features: Live when available, upcoming, and archived
 finished fixtures from the configured women's competitions, sorted by kickoff.
-Fixtures and results are supplied by TheSportsDB's free API, which does not
-guarantee live score updates.
+TheSportsDB supplies fixtures and results and does not guarantee live score
+updates.
 
 Page: Community
 Functionalities and features: Discussions grouped by team, league, or topic
@@ -18,8 +18,8 @@ Page: Polls
 Functionalities and features: Vote on questions about matches and players
 
 Page: Predictions
-Functionalities and features: Browse upcoming matches using the shared Match
-Center fixture cache. Prediction submissions are not available yet.
+Functionalities and features: Submit member score predictions for upcoming
+matches and view finished scores with saved predictions.
 
 Page: User profiles
 Functionalities and features: Members can edit a display name, short bio,
@@ -206,6 +206,14 @@ is opened. TheSportsDB league schedules are cached to limit API requests. This
 keeps page visits from
 making duplicate API calls. Configure the league IDs in the PHP server
 environment before loading either page.
+
+Finished fixtures returned by each league's past schedule are saved to the
+`football_finished_matches` table and merged into both pages. Each on-demand
+refresh updates completed scores and adds any additional completed fixtures the
+API returns, so archived results remain available after they disappear from
+the provider's recent schedule. The table is created automatically and is also
+included in `database.sql`; an optional setup script for an existing database
+is `woso_app/finished_matches_migration.sql`.
 
 Signed-in members can select an upcoming fixture on Predictions, enter a whole
 number of goals for both teams (including zero), and submit or update their
