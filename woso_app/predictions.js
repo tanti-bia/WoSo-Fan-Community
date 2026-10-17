@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
-	const form = document.querySelector('.prediction-form');
-	if (!form) return;
+	const formItem = document.querySelector('[data-prediction-form-item]');
+	const form = formItem?.querySelector('.prediction-form');
+	if (!formItem || !form) return;
 
 	const selectedMatch = form.querySelector('[data-prediction-selected]');
 	const eventIdInput = form.querySelector('[data-prediction-event-id]');
@@ -16,6 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		selectedCard = card;
 		selectedCard.classList.add('is-prediction-selected');
 		selectedCard.setAttribute('aria-pressed', 'true');
+		selectedCard.after(formItem);
+		formItem.hidden = false;
 		eventIdInput.value = card.dataset.predictionMatch || '';
 		selectedMatch.textContent = `${card.dataset.homeTeam} vs ${card.dataset.awayTeam}`;
 		homeScoreInput.value = card.dataset.savedHomeScore || '';

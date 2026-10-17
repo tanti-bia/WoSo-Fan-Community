@@ -2490,11 +2490,21 @@ body > p
 {
 	display: grid;
 	gap: 14px;
-	margin: 22px 0 30px;
+	margin: 8px 0 12px;
 	padding: 20px;
 	border: 1px solid var(--green-300);
 	border-radius: 16px;
 	background: var(--surface-muted);
+}
+
+.prediction-form-item
+{
+	list-style: none;
+}
+
+.prediction-form-item[hidden]
+{
+	display: none;
 }
 
 .prediction-form h2,

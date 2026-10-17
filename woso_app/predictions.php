@@ -144,20 +144,6 @@ try {
 		<?php if ($matchError !== ''): ?>
 			<p class="auth-message auth-error" role="alert"><?= escape_html($matchError) ?></p>
 		<?php else: ?>
-			<?php if (isset($_SESSION['user_id'])): ?>
-				<form class="prediction-form" method="post" action="predictions.php" aria-labelledby="prediction-form-heading">
-					<h2 id="prediction-form-heading">Your score prediction</h2>
-					<p class="prediction-selected-match" data-prediction-selected>No match selected. Tap an upcoming match below.</p>
-					<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
-					<input type="hidden" name="event_id" value="" data-prediction-event-id required>
-					<div class="prediction-score-fields">
-						<label>Home goals <input type="number" name="home_score" min="0" max="4294967295" step="1" required inputmode="numeric" data-prediction-home-score></label>
-						<span aria-hidden="true">–</span>
-						<label>Away goals <input type="number" name="away_score" min="0" max="4294967295" step="1" required inputmode="numeric" data-prediction-away-score></label>
-					</div>
-					<button class="auth-button" type="submit">Submit prediction</button>
-				</form>
-			<?php endif; ?>
 			<section aria-labelledby="prediction-fixtures-heading">
 				<h2 id="prediction-fixtures-heading">Upcoming matches</h2>
 				<?php if ($upcomingMatches !== []): ?>
@@ -167,6 +153,22 @@ try {
 							<?php $prediction = $userPredictions[$eventId] ?? []; ?>
 							<?php render_football_match_card($match, false, $useLocalMatchTime, isset($_SESSION['user_id']) ? $prediction : null); ?>
 						<?php endforeach; ?>
+						<?php if (isset($_SESSION['user_id'])): ?>
+							<li class="prediction-form-item" data-prediction-form-item hidden>
+								<form class="prediction-form" method="post" action="predictions.php" aria-labelledby="prediction-form-heading">
+									<h2 id="prediction-form-heading">Your score prediction</h2>
+									<p class="prediction-selected-match" data-prediction-selected></p>
+									<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
+									<input type="hidden" name="event_id" value="" data-prediction-event-id required>
+									<div class="prediction-score-fields">
+										<label>Home goals <input type="number" name="home_score" min="0" max="4294967295" step="1" required inputmode="numeric" data-prediction-home-score></label>
+										<span aria-hidden="true">–</span>
+										<label>Away goals <input type="number" name="away_score" min="0" max="4294967295" step="1" required inputmode="numeric" data-prediction-away-score></label>
+									</div>
+									<button class="auth-button" type="submit">Submit prediction</button>
+								</form>
+							</li>
+						<?php endif; ?>
 					</ul>
 				<?php else: ?>
 					<p class="match-empty">No upcoming matches were found in the next 14 days.</p>
