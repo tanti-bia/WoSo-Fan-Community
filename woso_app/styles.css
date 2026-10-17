@@ -2444,6 +2444,25 @@ body > p
 	grid-row: 1 / span 2;
 }
 
+/* Keep secondary profile actions readable over the dark green theme. */
+.profile-secondary-button,
+.profile-account-actions .profile-secondary-button
+{
+	border-color: var(--green-300);
+	background-color: #fff;
+	color: var(--green-900);
+}
+
+.profile-secondary-button:hover,
+.profile-secondary-button:focus-visible,
+.profile-account-actions .profile-secondary-button:hover,
+.profile-account-actions .profile-secondary-button:focus-visible
+{
+	border-color: var(--line);
+	background-color: var(--surface-muted);
+	color: var(--green-900);
+}
+
 @media (max-width: 620px)
 {
 	.post-review-form label,
@@ -2678,6 +2697,49 @@ body > p
   border-color: var(--line);
   background-color: var(--surface-muted);
   color: var(--green-900);
+}
+
+.match-center-heading h1,
+.match-center .match-view-panel > h2
+{
+  color: #f0f6f0;
+}
+
+.match-center .home-eyebrow
+{
+  color: #d8efdc;
+}
+
+.match-center .match-center-heading > p:last-child
+{
+  color: #e4efe6;
+}
+
+.match-center .page-back-button
+{
+  color: #f0f6f0;
+}
+
+.match-center .page-back-button:hover,
+.match-center .page-back-button:focus-visible
+{
+  color: var(--green-900);
+}
+
+.match-center .match-attribution
+{
+  color: #d4e3d7;
+}
+
+.match-center .match-attribution a
+{
+  color: #c4ebce;
+}
+
+.match-center .match-attribution a:hover,
+.match-center .match-attribution a:focus-visible
+{
+  color: #fff;
 }
 
 @media (max-width: 560px)

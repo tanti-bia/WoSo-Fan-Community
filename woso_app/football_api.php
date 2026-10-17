@@ -321,7 +321,11 @@ function football_match_status_label(array $fixture): string
 		$liveTime = $liveTime['short'] ?? $liveTime['long'] ?? '';
 	}
 	if (is_string($liveTime) && $liveTime !== '') {
-		return $liveTime;
+		return match (strtoupper(trim($liveTime))) {
+			'1H' => '1st half',
+			'2H' => '2nd half',
+			default => $liveTime,
+		};
 	}
 
 	$reason = $status['reason'] ?? [];
