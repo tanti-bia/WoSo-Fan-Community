@@ -112,7 +112,8 @@ MySQL database with an external provider before deploying.
    league IDs. Find IDs in TheSportsDB's
    [league browser](https://www.thesportsdb.com/browse_leagues) or through its
    free `search_all_leagues.php` endpoint. The app uses TheSportsDB's free API
-   key and does not require a paid API key. Free API data is cached; live score
+   key `123` by default; the previous key `3` has been disabled. Set
+   `WOSO_THESPORTSDB_API_KEY` only if you have another key. Free API data is cached; live score
    updates are not guaranteed.
 
 The container installs PHP 8.4 with PDO MySQL and verifies the built-in

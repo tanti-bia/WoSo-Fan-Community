@@ -1159,6 +1159,15 @@ button
   overflow-wrap: anywhere;
 }
 
+.match-team-badge
+{
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  vertical-align: middle;
+  margin: 0 6px;
+}
+
 .match-away-team
 {
   text-align: left;

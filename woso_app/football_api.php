@@ -26,6 +26,12 @@ function football_api_competition_name(int $leagueId): string
 	return 'Competition ' . $leagueId;
 }
 
+function football_api_key(): string
+{
+	$key = getenv('WOSO_THESPORTSDB_API_KEY');
+	return $key === false || trim($key) === '' ? '123' : trim($key);
+}
+
 function football_api_cached_response(string $url, int $extendTtl = 0): ?array
 {
 	$cacheDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'woso-football-cache';
@@ -119,7 +125,7 @@ function football_api_cached_request(string $url, int $cacheTtl, bool $extendCac
 
 function football_api_matches_for_date(string $date): array
 {
-	$url = 'https://www.thesportsdb.com/api/v1/json/3/eventsday.php?'
+	$url = 'https://www.thesportsdb.com/api/v1/json/' . rawurlencode(football_api_key()) . '/eventsday.php?'
 		. http_build_query(['d' => $date, 's' => 'Soccer']);
 
 	return football_api_cached_request($url, 300);
@@ -130,7 +136,7 @@ function football_api_events_for_league(int $leagueId, string $direction): array
 	if (!in_array($direction, ['next', 'past'], true)) {
 		throw new InvalidArgumentException('Match lookup direction must be next or past.');
 	}
-	$url = 'https://www.thesportsdb.com/api/v1/json/3/events' . $direction . 'league.php?'
+	$url = 'https://www.thesportsdb.com/api/v1/json/' . rawurlencode(football_api_key()) . '/events' . $direction . 'league.php?'
 		. http_build_query(['id' => $leagueId]);
 
 	return football_api_cached_request($url, $direction === 'next' ? 3600 : 900);
@@ -186,6 +192,16 @@ function football_api_league_fixtures(array $response, int $leagueId): array
 
 function football_api_normalize_event(array $event, int $leagueId): array
 {
+	$eventName = trim((string) ($event['strEvent'] ?? ''));
+	$homeName = trim((string) ($event['strHomeTeam'] ?? ''));
+	$awayName = trim((string) ($event['strAwayTeam'] ?? ''));
+	if (($homeName === '' || $awayName === '') && $eventName !== '') {
+		$parts = preg_split('/\s+(?:vs?\.?|@)\s+/iu', $eventName, 2);
+		if (is_array($parts) && count($parts) === 2) {
+			$homeName = $homeName !== '' ? $homeName : trim($parts[0]);
+			$awayName = $awayName !== '' ? $awayName : trim($parts[1]);
+		}
+	}
 	$rawStatus = strtoupper(trim((string) ($event['strStatus'] ?? '')));
 	$finishedStatuses = ['FT', 'AET', 'PEN', 'AWD', 'WO', 'FINISHED', 'MATCH FINISHED'];
 	$cancelledStatuses = ['PST', 'CANC', 'ABD', 'POSTPONED', 'CANCELLED', 'ABANDONED'];
@@ -208,12 +224,15 @@ function football_api_normalize_event(array $event, int $leagueId): array
 
 	return [
 		'id' => (string) ($event['idEvent'] ?? ''),
+		'eventName' => $eventName,
 		'home' => [
-			'name' => (string) ($event['strHomeTeam'] ?? ''),
+			'name' => $homeName,
+			'badge' => (string) ($event['strHomeTeamBadge'] ?? ''),
 			'score' => $event['intHomeScore'] ?? null,
 		],
 		'away' => [
-			'name' => (string) ($event['strAwayTeam'] ?? ''),
+			'name' => $awayName,
+			'badge' => (string) ($event['strAwayTeamBadge'] ?? ''),
 			'score' => $event['intAwayScore'] ?? null,
 		],
 		'status' => [
@@ -228,9 +247,11 @@ function football_api_normalize_event(array $event, int $leagueId): array
 		'league' => [
 			'id' => $leagueId,
 			'name' => (string) ($event['strLeague'] ?? 'Competition'),
+			'season' => (string) ($event['strSeason'] ?? ''),
 			'country' => (string) ($event['strCountry'] ?? ''),
 		],
 		'venue' => (string) ($event['strVenue'] ?? ''),
+		'video' => (string) ($event['strVideo'] ?? ''),
 	];
 }
 
@@ -362,7 +383,7 @@ function football_api_shared_fixtures(PDO $database): array
 	);
 
 	$leagueIds = football_api_league_ids();
-	$cacheKey = hash('sha256', 'thesportsdb:' . implode(',', $leagueIds));
+	$cacheKey = hash('sha256', 'thesportsdb:' . football_api_key() . ':' . implode(',', $leagueIds));
 	$cacheQuery = $database->prepare(
 		'SELECT fixtures_json, fetched_at
 		FROM football_match_cache

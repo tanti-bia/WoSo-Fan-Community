@@ -53,6 +53,7 @@ function render_football_match_card(array $fixture, bool $featured = false): voi
 	$homeScore = football_match_score($fixture['home']);
 	$awayScore = football_match_score($fixture['away']);
 	$hasScore = $homeScore !== '—' && $awayScore !== '—';
+	$season = (string) ($fixture['league']['season'] ?? '');
 	$league = (string) ($fixture['league']['name'] ?? '');
 	if ($league === '' || $league === 'Competition') {
 		$leagueId = (int) ($fixture['league']['id'] ?? 0);
@@ -61,10 +62,15 @@ function render_football_match_card(array $fixture, bool $featured = false): voi
 	?>
 	<li class="match-card<?= $featured ? ' match-card-featured' : '' ?><?= $isLive ? ' is-live' : '' ?>">
 		<div class="match-card-top">
-			<p class="match-league"><?= escape_html($league) ?></p>
+			<p class="match-league"><?= escape_html($league) ?><?= $season !== '' ? ' · ' . escape_html($season) : '' ?></p>
 		</div>
 		<p class="match-teams">
-			<span class="match-home-team"><?= escape_html((string) $fixture['home']['name']) ?></span>
+			<span class="match-home-team">
+				<?php if (filter_var($fixture['home']['badge'] ?? '', FILTER_VALIDATE_URL) && str_starts_with((string) $fixture['home']['badge'], 'https://')): ?>
+					<img class="match-team-badge" src="<?= escape_html((string) $fixture['home']['badge']) ?>" alt="" loading="lazy">
+				<?php endif; ?>
+				<?= escape_html((string) $fixture['home']['name']) ?>
+			</span>
 			<span class="match-center-details">
 				<span class="match-time">
 					<?php if ($isLive): ?>
@@ -80,8 +86,17 @@ function render_football_match_card(array $fixture, bool $featured = false): voi
 				</span>
 				<span class="match-status<?= $isLive ? ' is-live' : '' ?>"><?= escape_html($isLive ? 'Live' : ($isFinished ? 'Finished' : 'Upcoming')) ?></span>
 			</span>
-			<span class="match-away-team"><?= escape_html((string) $fixture['away']['name']) ?></span>
+			<span class="match-away-team">
+				<?php if (filter_var($fixture['away']['badge'] ?? '', FILTER_VALIDATE_URL) && str_starts_with((string) $fixture['away']['badge'], 'https://')): ?>
+					<img class="match-team-badge" src="<?= escape_html((string) $fixture['away']['badge']) ?>" alt="" loading="lazy">
+				<?php endif; ?>
+				<?= escape_html((string) $fixture['away']['name']) ?>
+			</span>
 		</p>
+		<?php $videoUrl = (string) ($fixture['video'] ?? ''); ?>
+		<?php if (filter_var($videoUrl, FILTER_VALIDATE_URL) && str_starts_with($videoUrl, 'https://')): ?>
+			<p class="match-meta"><a href="<?= escape_html($videoUrl) ?>" target="_blank" rel="noopener noreferrer">Watch video</a></p>
+		<?php endif; ?>
 	</li>
 	<?php
 }
