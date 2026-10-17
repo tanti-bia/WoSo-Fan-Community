@@ -414,15 +414,15 @@ function football_api_shared_fixtures(PDO $database): array
 
 	try {
 		$fixtures = [];
-		// League next/past endpoints return a limited number of events. Fetch each
-		// day in both displayed horizons so all recent results and upcoming matches
-		// can be included, then let the match view filter and sort them.
-		$utcToday = new DateTimeImmutable('today', new DateTimeZone('UTC'));
-		for ($dayOffset = -7; $dayOffset <= 14; $dayOffset++) {
-			$date = $utcToday->modify('+' . $dayOffset . ' days')->format('Y-m-d');
-			$dayFixtures = football_api_fixtures(football_api_matches_for_date($date), $leagueIds);
-			foreach ($dayFixtures as $fixture) {
-				$fixtures[football_match_fixture_key($fixture)] = $fixture;
+		// The free daily endpoint returns only a small global sample, most of which
+		// may be outside the configured leagues. Use the league-specific schedules
+		// so a refresh always includes the selected competitions.
+		foreach ($leagueIds as $leagueId) {
+			foreach (['past', 'next'] as $direction) {
+				$leagueEvents = football_api_events_for_league($leagueId, $direction);
+				foreach (football_api_league_fixtures($leagueEvents, $leagueId) as $fixture) {
+					$fixtures[football_match_fixture_key($fixture)] = $fixture;
+				}
 			}
 		}
 		$fixtures = array_values($fixtures);
@@ -465,7 +465,9 @@ function football_api_shared_fixtures(PDO $database): array
 		error_log('WoSo match data warning: fixture refresh failed; serving the shared cached fixtures. ' . $exception->getMessage());
 		return [
 			'fixtures' => $cachedFixtures,
-			'warning' => 'Live results unavailable. Showing matches from the last successful request.',
+			'warning' => $cachedFixtures === []
+				? 'Live results unavailable. The last successful request found no matches for the selected leagues.'
+				: 'Live results unavailable. Showing matches from the last successful request.',
 		];
 	} catch (JsonException $exception) {
 		throw new RuntimeException('TheSportsDB returned match data that could not be saved.', 0, $exception);

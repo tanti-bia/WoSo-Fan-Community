@@ -202,8 +202,8 @@ CREATE TABLE IF NOT EXISTS football_match_cache
 
 Match Center and Predictions read the same cached fixture snapshot. The shared
 snapshot is refreshed at most every 5 minutes when Match Center or Predictions
-is opened. TheSportsDB schedules and daily events are cached to limit API
-requests. This keeps page visits from
+is opened. TheSportsDB league schedules are cached to limit API requests. This
+keeps page visits from
 making duplicate API calls. Configure the league IDs in the PHP server
 environment before loading either page.
 
