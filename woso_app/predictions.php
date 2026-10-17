@@ -8,6 +8,7 @@ require_once __DIR__ . '/match_view.php';
 
 $matchError = '';
 $matchWarning = '';
+$useLocalMatchTime = football_match_user_has_location();
 $upcomingMatches = [];
 try {
 	$matchData = football_api_shared_fixtures(database_connection());
@@ -33,6 +34,7 @@ try {
 	<link rel="stylesheet" href="styles.css">
 	<script src="image_viewer.js" defer></script>
 	<script src="back_button.js" defer></script>
+	<script src="match_times.js" defer></script>
 </head>
 <body>
 	<nav class="topnav" aria-label="Main navigation">
@@ -65,7 +67,7 @@ try {
 				<?php if ($upcomingMatches !== []): ?>
 					<ul class="match-list">
 						<?php foreach ($upcomingMatches as $match): ?>
-							<?php render_football_match_card($match); ?>
+							<?php render_football_match_card($match, false, $useLocalMatchTime); ?>
 						<?php endforeach; ?>
 					</ul>
 				<?php else: ?>

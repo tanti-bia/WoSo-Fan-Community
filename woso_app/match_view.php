@@ -38,7 +38,24 @@ function football_match_groups(array $fixtures, DateTimeImmutable $now, int $upc
 	return ['live' => $live, 'upcoming' => $upcoming, 'finished' => $finished];
 }
 
-function render_football_match_card(array $fixture, bool $featured = false): void
+function football_match_user_has_location(): bool
+{
+	if (!isset($_SESSION['user_id'])) {
+		return false;
+	}
+
+	try {
+		$query = database_connection()->prepare('SELECT location FROM users WHERE user_id = :user_id LIMIT 1');
+		$query->execute(['user_id' => (int) $_SESSION['user_id']]);
+		$location = $query->fetchColumn();
+		return is_string($location) && trim($location) !== '';
+	} catch (PDOException $exception) {
+		error_log('WoSo match timezone profile lookup error: ' . $exception->getMessage());
+		return false;
+	}
+}
+
+function render_football_match_card(array $fixture, bool $featured = false, bool $useLocalTime = false): void
 {
 	$isLive = football_match_is_live($fixture);
 	$isFinished = football_match_is_finished($fixture);
@@ -76,8 +93,9 @@ function render_football_match_card(array $fixture, bool $featured = false): voi
 					<?php if ($isLive): ?>
 						<?= escape_html($statusLabel) ?>
 					<?php elseif ($kickoff !== null): ?>
-						<time datetime="<?= escape_html($kickoff->format(DateTimeInterface::ATOM)) ?>">
-							<?= escape_html($kickoff->format('D, M j · g:i A T')) ?>
+						<?php $utcKickoff = $kickoff->setTimezone(new DateTimeZone('UTC')); ?>
+						<time datetime="<?= escape_html($utcKickoff->format(DateTimeInterface::ATOM)) ?>"<?= $useLocalTime ? ' data-local-match-time="true"' : '' ?>>
+							<?= escape_html($utcKickoff->format('D, M j · g:i A')) ?> GMT
 						</time>
 					<?php endif; ?>
 				</span>

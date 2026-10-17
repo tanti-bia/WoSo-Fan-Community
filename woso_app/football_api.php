@@ -414,19 +414,16 @@ function football_api_shared_fixtures(PDO $database): array
 
 	try {
 		$fixtures = [];
-		foreach ($leagueIds as $leagueId) {
-			foreach (['past', 'next'] as $direction) {
-				$leagueEvents = football_api_events_for_league($leagueId, $direction);
-				foreach (football_api_league_fixtures($leagueEvents, $leagueId) as $fixture) {
-					$fixtures[football_match_fixture_key($fixture)] = $fixture;
-				}
+		// League next/past endpoints return a limited number of events. Fetch each
+		// day in both displayed horizons so all recent results and upcoming matches
+		// can be included, then let the match view filter and sort them.
+		$utcToday = new DateTimeImmutable('today', new DateTimeZone('UTC'));
+		for ($dayOffset = -7; $dayOffset <= 14; $dayOffset++) {
+			$date = $utcToday->modify('+' . $dayOffset . ' days')->format('Y-m-d');
+			$dayFixtures = football_api_fixtures(football_api_matches_for_date($date), $leagueIds);
+			foreach ($dayFixtures as $fixture) {
+				$fixtures[football_match_fixture_key($fixture)] = $fixture;
 			}
-		}
-
-		$today = (new DateTimeImmutable('today'))->format('Y-m-d');
-		$todayFixtures = football_api_fixtures(football_api_matches_for_date($today), $leagueIds);
-		foreach ($todayFixtures as $fixture) {
-			$fixtures[football_match_fixture_key($fixture)] = $fixture;
 		}
 		$fixtures = array_values($fixtures);
 		$fixturesJson = json_encode($fixtures, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);

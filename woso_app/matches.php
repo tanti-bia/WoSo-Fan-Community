@@ -10,6 +10,7 @@ $now = new DateTimeImmutable('now');
 $matchGroups = ['live' => [], 'upcoming' => [], 'finished' => []];
 $matchWarning = '';
 $matchError = '';
+$useLocalMatchTime = football_match_user_has_location();
 try {
 	$matchData = football_api_shared_fixtures(database_connection());
 	$matchGroups = football_match_groups($matchData['fixtures'], $now);
@@ -33,6 +34,7 @@ try {
 	<link rel="stylesheet" href="styles.css">
 	<script src="back_button.js" defer></script>
 	<script src="matches.js" defer></script>
+	<script src="match_times.js" defer></script>
 </head>
 <body>
 	<nav class="topnav" aria-label="Main navigation">
@@ -68,7 +70,7 @@ try {
 				<?php if ($matchGroups['live'] !== []): ?>
 					<ul class="match-list match-featured-list">
 						<?php foreach ($matchGroups['live'] as $index => $match): ?>
-							<?php render_football_match_card($match, $index === 0); ?>
+							<?php render_football_match_card($match, $index === 0, $useLocalMatchTime); ?>
 						<?php endforeach; ?>
 					</ul>
 				<?php else: ?>
@@ -79,7 +81,7 @@ try {
 				<?php if ($matchGroups['upcoming'] !== []): ?>
 					<ul class="match-list">
 						<?php foreach ($matchGroups['upcoming'] as $match): ?>
-							<?php render_football_match_card($match); ?>
+							<?php render_football_match_card($match, false, $useLocalMatchTime); ?>
 						<?php endforeach; ?>
 					</ul>
 				<?php else: ?>
@@ -92,7 +94,7 @@ try {
 				<?php if ($matchGroups['finished'] !== []): ?>
 					<ul class="match-list">
 						<?php foreach ($matchGroups['finished'] as $match): ?>
-							<?php render_football_match_card($match); ?>
+							<?php render_football_match_card($match, false, $useLocalMatchTime); ?>
 						<?php endforeach; ?>
 					</ul>
 				<?php else: ?>
