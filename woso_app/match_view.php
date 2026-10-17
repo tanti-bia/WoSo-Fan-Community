@@ -55,7 +55,7 @@ function football_match_user_has_location(): bool
 	}
 }
 
-function render_football_match_card(array $fixture, bool $featured = false, bool $useLocalTime = false, ?array $prediction = null): void
+function render_football_match_card(array $fixture, bool $featured = false, bool $useLocalTime = false, ?array $prediction = null, bool $predictionSelectable = true): void
 {
 	$isLive = football_match_is_live($fixture);
 	$isFinished = football_match_is_finished($fixture);
@@ -77,7 +77,8 @@ function render_football_match_card(array $fixture, bool $featured = false, bool
 		$league = $leagueId > 0 ? football_api_competition_name($leagueId) : 'Competition';
 	}
 	?>
-	<?php $selectable = $prediction !== null; ?>
+	<?php $showPrediction = $prediction !== null; ?>
+	<?php $selectable = $showPrediction && $predictionSelectable; ?>
 	<li class="match-card<?= $featured ? ' match-card-featured' : '' ?><?= $isLive ? ' is-live' : '' ?><?= $selectable ? ' prediction-match-card' : '' ?>"<?= $selectable ? ' role="button" tabindex="0" aria-pressed="false" data-prediction-match="' . escape_html((string) $fixture['id']) . '" data-home-team="' . escape_html((string) $fixture['home']['name']) . '" data-away-team="' . escape_html((string) $fixture['away']['name']) . '" data-saved-home-score="' . escape_html((string) ($prediction['home_score'] ?? '')) . '" data-saved-away-score="' . escape_html((string) ($prediction['away_score'] ?? '')) . '" aria-label="Select prediction for ' . escape_html((string) $fixture['home']['name'] . ' versus ' . (string) $fixture['away']['name']) . '"' : '' ?>>
 		<div class="match-card-top">
 			<p class="match-league"><?= escape_html($league) ?><?= $season !== '' ? ' · ' . escape_html($season) : '' ?></p>
@@ -116,12 +117,12 @@ function render_football_match_card(array $fixture, bool $featured = false, bool
 		<?php if (!$selectable && filter_var($videoUrl, FILTER_VALIDATE_URL) && str_starts_with($videoUrl, 'https://')): ?>
 			<p class="match-meta"><a href="<?= escape_html($videoUrl) ?>" target="_blank" rel="noopener noreferrer">Watch video</a></p>
 		<?php endif; ?>
-		<?php if ($selectable): ?>
-			<p class="prediction-card-score" aria-live="polite">
+		<?php if ($showPrediction): ?>
+			<p class="prediction-card-score<?= $selectable ? '' : ' prediction-result-summary' ?>"<?= $selectable ? ' aria-live="polite"' : '' ?>>
 				<?php if ($prediction !== []): ?>
 					Your prediction: <?= escape_html((string) $prediction['home_score'] . ' – ' . (string) $prediction['away_score']) ?>
 				<?php else: ?>
-					Select match to predict
+					<?= $selectable ? 'Select match to predict' : 'You did not submit a prediction for this match.' ?>
 				<?php endif; ?>
 			</p>
 		<?php endif; ?>

@@ -12,6 +12,7 @@ $actionError = '';
 $saved = isset($_GET['saved']) && $_GET['saved'] === '1';
 $useLocalMatchTime = football_match_user_has_location();
 $upcomingMatches = [];
+$finishedMatches = [];
 $userPredictions = [];
 $database = null;
 
@@ -34,6 +35,7 @@ try {
 	$matchData = football_api_shared_fixtures($database);
 	$matchGroups = football_match_groups($matchData['fixtures'], new DateTimeImmutable('now'));
 	$upcomingMatches = $matchGroups['upcoming'];
+	$finishedMatches = $matchGroups['finished'];
 	$matchWarning = $matchData['warning'] ?? '';
 
 	if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -144,8 +146,13 @@ try {
 		<?php if ($matchError !== ''): ?>
 			<p class="auth-message auth-error" role="alert"><?= escape_html($matchError) ?></p>
 		<?php else: ?>
-			<section aria-labelledby="prediction-fixtures-heading">
-				<h2 id="prediction-fixtures-heading">Upcoming matches</h2>
+			<div class="match-view-switch" role="tablist" aria-label="Prediction views">
+				<button id="make-predictions-tab" class="is-active" type="button" role="tab" aria-selected="true" aria-controls="make-predictions-panel" data-prediction-view="make">Make predictions</button>
+				<button id="view-results-tab" type="button" role="tab" aria-selected="false" aria-controls="view-results-panel" data-prediction-view="results" tabindex="-1">View results</button>
+			</div>
+
+			<section id="make-predictions-panel" class="match-view-panel" role="tabpanel" aria-labelledby="make-predictions-tab">
+				<h2>Upcoming matches</h2>
 				<?php if ($upcomingMatches !== []): ?>
 					<ul class="match-list prediction-match-list">
 						<?php foreach ($upcomingMatches as $match): ?>
@@ -172,6 +179,21 @@ try {
 					</ul>
 				<?php else: ?>
 					<p class="match-empty">No upcoming matches were found in the next 14 days.</p>
+				<?php endif; ?>
+			</section>
+
+			<section id="view-results-panel" class="match-view-panel" role="tabpanel" aria-labelledby="view-results-tab" hidden>
+				<h2>Finished matches</h2>
+				<?php if ($finishedMatches !== []): ?>
+					<ul class="match-list prediction-results-list">
+						<?php foreach ($finishedMatches as $match): ?>
+							<?php $eventId = (string) ($match['id'] ?? ''); ?>
+							<?php $prediction = isset($_SESSION['user_id']) ? ($userPredictions[$eventId] ?? []) : null; ?>
+							<?php render_football_match_card($match, false, $useLocalMatchTime, $prediction, false); ?>
+						<?php endforeach; ?>
+					</ul>
+				<?php else: ?>
+					<p class="match-empty">No finished matches from the last 7 days.</p>
 				<?php endif; ?>
 			</section>
 		<?php endif; ?>

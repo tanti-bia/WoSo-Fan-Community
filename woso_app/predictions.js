@@ -1,4 +1,32 @@
 document.addEventListener('DOMContentLoaded', () => {
+	const tabs = Array.from(document.querySelectorAll('[data-prediction-view]'));
+	const panels = {
+		make: document.querySelector('#make-predictions-panel'),
+		results: document.querySelector('#view-results-panel'),
+	};
+	const selectView = (view, focusTab = false) => {
+		tabs.forEach((tab) => {
+			const selected = tab.dataset.predictionView === view;
+			tab.classList.toggle('is-active', selected);
+			tab.setAttribute('aria-selected', String(selected));
+			tab.tabIndex = selected ? 0 : -1;
+			if (selected && focusTab) tab.focus();
+		});
+		Object.entries(panels).forEach(([panelView, panel]) => {
+			if (panel) panel.hidden = panelView !== view;
+		});
+	};
+	tabs.forEach((tab, index) => {
+		tab.addEventListener('click', () => selectView(tab.dataset.predictionView));
+		tab.addEventListener('keydown', (event) => {
+			if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+			event.preventDefault();
+			const direction = event.key === 'ArrowRight' ? 1 : -1;
+			const nextIndex = (index + direction + tabs.length) % tabs.length;
+			selectView(tabs[nextIndex].dataset.predictionView, true);
+		});
+	});
+
 	const formItem = document.querySelector('[data-prediction-form-item]');
 	const form = formItem?.querySelector('.prediction-form');
 	if (!formItem || !form) return;

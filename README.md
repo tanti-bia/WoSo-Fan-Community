@@ -209,7 +209,9 @@ environment before loading either page.
 
 Signed-in members can select an upcoming fixture on Predictions, enter a whole
 number of goals for both teams (including zero), and submit or update their
-score until kickoff. Each member has one saved prediction per fixture. The
+score until kickoff. The Predictions page separates upcoming fixtures from
+finished results; the results view shows the member's saved score beside the
+final score. Each member has one saved prediction per fixture. The
 `predictions` table is created automatically when Predictions is opened; it is
 also included in `database.sql`. For an existing installation, the optional
 one-time SQL is in `woso_app/predictions_migration.sql`.
