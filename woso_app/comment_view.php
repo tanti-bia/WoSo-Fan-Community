@@ -80,9 +80,10 @@ function render_comment(
 				<input type="hidden" name="target_type" value="comment">
 				<input type="hidden" name="post_id" value="<?= (int) $comment['post_id'] ?>">
 				<input type="hidden" name="target_id" value="<?= $commentId ?>">
-				<label class="visually-hidden" for="reply-<?= $commentId ?>">Reply to comment</label>
-				<input id="reply-<?= $commentId ?>" name="content" type="text" maxlength="5000" placeholder="Write a reply...">
-				<div class="composer-icon-stack">
+				<div class="post-comment-bubble">
+					<label class="visually-hidden" for="reply-<?= $commentId ?>">Reply to comment</label>
+					<input id="reply-<?= $commentId ?>" name="content" type="text" maxlength="5000" placeholder="Write a reply...">
+					<div class="composer-icon-stack">
 					<button class="composer-send-button" type="submit" aria-label="Reply" title="Reply">
 						<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11.5 21 3l-8.5 18-1.7-7.8L3 11.5Z"/><path d="m10.8 13.2 4.8-4.8"/></svg>
 					</button>
@@ -91,6 +92,7 @@ function render_comment(
 						<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 12.5 14.7 6.3a3.2 3.2 0 0 1 4.5 4.5l-8.1 8.1a5 5 0 0 1-7.1-7.1l8.1-8.1"/><path d="m7.8 14.2 8.1-8.1"/></svg>
 						<span class="visually-hidden">Attach a photo or video</span>
 					</label>
+					</div>
 				</div>
 			</form>
 		<?php endif; ?>

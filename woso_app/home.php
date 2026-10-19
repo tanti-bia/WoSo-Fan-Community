@@ -709,12 +709,9 @@ http_response_code($status);
 					<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
 					<input type="hidden" name="action" value="create">
 					<label class="visually-hidden" for="post-content">Write a post</label>
-					<textarea id="post-content" name="content" maxlength="<?= MAX_POST_CONTENT_LENGTH ?>" placeholder="Share a thought about women's football..." rows="4"><?= escape_html(post_string('content')) ?></textarea>
-					<div class="post-composer-actions">
-						<div>
-							<p class="post-hint">JPEG, PNG, GIF, WebP, MP4, WebM, or MOV. Up to 25 MB.</p>
-						</div>
-						<div class="composer-icon-stack">
+					<div class="post-composer-bubble">
+						<textarea id="post-content" name="content" maxlength="<?= MAX_POST_CONTENT_LENGTH ?>" placeholder="Share a thought about women's football..." rows="3"><?= escape_html(post_string('content')) ?></textarea>
+						<div class="post-composer-actions composer-icon-stack">
 							<button class="composer-send-button" type="submit" aria-label="Share post" title="Share post">
 								<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11.5 21 3l-8.5 18-1.7-7.8L3 11.5Z"/><path d="m10.8 13.2 4.8-4.8"/></svg>
 							</button>
@@ -725,6 +722,7 @@ http_response_code($status);
 							</label>
 						</div>
 					</div>
+					<p class="post-hint">JPEG, PNG, GIF, WebP, MP4, WebM, or MOV. Up to 25 MB.</p>
 				</form>
 			</section>
 		<?php elseif (!$profileViewRequested && !$postViewRequested): ?>
@@ -925,9 +923,10 @@ http_response_code($status);
 									<input type="hidden" name="target_id" value="<?= $postId ?>">
 									<input type="hidden" name="post_id" value="<?= $postId ?>">
 									<input type="hidden" name="action" value="comment">
-									<label class="visually-hidden" for="comment-<?= escape_html($feedItemKey) ?>">Write a comment</label>
-									<input id="comment-<?= escape_html($feedItemKey) ?>" name="content" type="text" maxlength="<?= MAX_POST_CONTENT_LENGTH ?>" placeholder="Write a comment...">
-									<div class="composer-icon-stack">
+									<div class="post-comment-bubble">
+										<label class="visually-hidden" for="comment-<?= escape_html($feedItemKey) ?>">Write a comment</label>
+										<input id="comment-<?= escape_html($feedItemKey) ?>" name="content" type="text" maxlength="<?= MAX_POST_CONTENT_LENGTH ?>" placeholder="Write a comment...">
+										<div class="composer-icon-stack">
 										<button class="composer-send-button" type="submit" aria-label="Comment" title="Comment">
 											<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11.5 21 3l-8.5 18-1.7-7.8L3 11.5Z"/><path d="m10.8 13.2 4.8-4.8"/></svg>
 										</button>
@@ -936,6 +935,7 @@ http_response_code($status);
 											<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 12.5 14.7 6.3a3.2 3.2 0 0 1 4.5 4.5l-8.1 8.1a5 5 0 0 1-7.1-7.1l8.1-8.1"/><path d="m7.8 14.2 8.1-8.1"/></svg>
 											<span class="visually-hidden">Attach a photo or video</span>
 										</label>
+										</div>
 									</div>
 								</form>
 							<?php endif; ?>

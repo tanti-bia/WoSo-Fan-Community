@@ -1,7 +1,7 @@
 (() => {
 	'use strict';
 
-	document.querySelectorAll('input[type="file"][name="profile_image"], input[type="file"][name="group_image"]').forEach((input) => {
+	document.querySelectorAll('input[type="file"][accept*="image/"], input[type="file"][accept*="video/"]').forEach((input) => {
 		const form = input.form;
 		if (!form) {
 			return;
@@ -35,15 +35,23 @@
 			</div>
 			<div class="upload-preview-video-wrap" hidden>
 				<video class="upload-preview-video" controls playsinline></video>
+				<div class="upload-preview-trim" hidden>
+					<label>Trim start (seconds)<input class="upload-preview-trim-start" type="number" min="0" step="0.1" value="0"></label>
+					<label>Trim end (seconds)<input class="upload-preview-trim-end" type="number" min="0" step="0.1"></label>
+				</div>
 			</div>
 			<p class="upload-preview-message" role="status"></p>
 		`;
-		input.insertAdjacentElement('afterend', preview);
+		const previewAnchor = input.closest('.community-composer-bubble, .post-composer-bubble, .post-comment-bubble') || input;
+		previewAnchor.insertAdjacentElement('afterend', preview);
 
 		const frame = preview.querySelector('.upload-preview-frame');
 		const image = preview.querySelector('.upload-preview-image');
 		const videoWrap = preview.querySelector('.upload-preview-video-wrap');
 		const video = preview.querySelector('.upload-preview-video');
+		const trimControls = preview.querySelector('.upload-preview-trim');
+		const trimStart = preview.querySelector('.upload-preview-trim-start');
+		const trimEnd = preview.querySelector('.upload-preview-trim-end');
 		const controls = preview.querySelector('.upload-preview-controls');
 		const zoom = preview.querySelector('.upload-preview-zoom');
 		const horizontal = preview.querySelector('.upload-preview-x');
@@ -106,8 +114,17 @@
 				frame.hidden = true;
 				controls.hidden = true;
 				videoWrap.hidden = false;
+				trimControls.hidden = true;
 				videoUrl = URL.createObjectURL(file);
 				video.src = videoUrl;
+				video.onloadedmetadata = () => {
+					trimStart.value = '0';
+					trimStart.max = String(video.duration);
+					trimEnd.value = String(Number(video.duration.toFixed(1)));
+					trimEnd.max = String(video.duration);
+					trimControls.hidden = false;
+					message.textContent = 'Preview the video and set a start and end time to trim it before uploading.';
+				};
 				return;
 			}
 			if (!isImageFile(file)) {
@@ -184,17 +201,57 @@
 				return;
 			}
 			const file = input.files?.[0];
-			if (!file || !isImageFile(file)) {
+			if (!file) {
+				return;
+			}
+			const isVideo = file.type.startsWith('video/') || /\.(?:mp4|webm|mov)$/i.test(file.name);
+			if (!isImageFile(file) && !isVideo) {
 				return;
 			}
 
 			event.preventDefault();
-			if (!imageReady) {
-				message.textContent = 'Wait for the photo preview to finish loading before submitting.';
-				return;
-			}
 
 			try {
+				if (isVideo) {
+					if (video.readyState < HTMLMediaElement.HAVE_METADATA) {
+						message.textContent = 'Wait for the video preview to finish loading before submitting.';
+						return;
+					}
+					const start = Number(trimStart.value);
+					const end = Number(trimEnd.value);
+					if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end > video.duration || end <= start) {
+						message.textContent = 'Choose a valid trim range. The end time must be after the start time.';
+						return;
+					}
+					if (start > 0 || end < video.duration - 0.05) {
+						const captureStream = video.captureStream || video.mozCaptureStream;
+						if (typeof captureStream !== 'function' || typeof MediaRecorder === 'undefined') {
+						message.textContent = 'Video trimming is not supported in this browser. You can still upload the full video.';
+						return;
+					}
+					message.textContent = 'Preparing the trimmed video...';
+					const trimmedBlob = await trimVideo(captureStream, start, end);
+					const mimeType = trimmedBlob.type || 'video/webm';
+					const extension = mimeType.includes('mp4') ? 'mp4' : 'webm';
+					const trimmedFile = new File(
+						[trimmedBlob],
+						`${file.name.replace(/\.[^.]+$/, '')}-trimmed.${extension}`,
+						{ type: mimeType, lastModified: Date.now() }
+					);
+					const transfer = new DataTransfer();
+					transfer.items.add(trimmedFile);
+					input.files = transfer.files;
+					message.textContent = 'Trimmed video is ready. Uploading...';
+					submitInProgress = true;
+					form.requestSubmit(event.submitter instanceof HTMLElement ? event.submitter : undefined);
+					return;
+					}
+					return;
+				}
+				if (!imageReady) {
+					message.textContent = 'Wait for the photo preview to finish loading before submitting.';
+					return;
+				}
 				const width = frame.clientWidth;
 				const height = frame.clientHeight;
 				const fitScale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
@@ -251,6 +308,65 @@
 				message.textContent = error instanceof Error
 					? error.message
 					: 'The edited photo could not be prepared for upload.';
+			}
+		});
+
+		const trimVideo = (captureStream, start, end) => new Promise((resolve, reject) => {
+			const preferredTypes = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+			const mimeType = preferredTypes.find((type) => MediaRecorder.isTypeSupported(type));
+			let recorder;
+			let chunks = [];
+			let stream;
+			let settled = false;
+			const finish = (error) => {
+				if (settled) return;
+				settled = true;
+				video.pause();
+				if (stream) stream.getTracks().forEach((track) => track.stop());
+				if (error) reject(error);
+			};
+			try {
+				stream = captureStream.call(video);
+				recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+				recorder.ondataavailable = (event) => {
+					if (event.data.size > 0) chunks.push(event.data);
+				};
+				recorder.onerror = () => finish(new Error('The trimmed video could not be created.'));
+				recorder.onstop = () => {
+					if (!settled) {
+						settled = true;
+						stream.getTracks().forEach((track) => track.stop());
+						resolve(new Blob(chunks, { type: recorder.mimeType || 'video/webm' }));
+					}
+				};
+				const stopAtEnd = () => {
+					if (video.currentTime >= end) {
+						video.pause();
+						if (recorder.state !== 'inactive') recorder.stop();
+					}
+				};
+				video.addEventListener('timeupdate', stopAtEnd);
+				video.addEventListener('ended', stopAtEnd, { once: true });
+				const startRecording = async () => {
+					try {
+						recorder.start();
+						await video.play();
+					} catch (error) {
+						if (recorder.state !== 'inactive') recorder.stop();
+						finish(error instanceof Error ? error : new Error('Video playback was blocked while trimming.'));
+					}
+				};
+				if (Math.abs(video.currentTime - start) < 0.01) {
+					startRecording();
+				} else {
+					video.addEventListener('seeked', startRecording, { once: true });
+					video.currentTime = start;
+				}
+				setTimeout(() => {
+					if (recorder.state !== 'inactive') recorder.stop();
+				}, Math.max(5000, (end - start) * 2500));
+			} catch (error) {
+				finish(error instanceof Error ? error : new Error('The trimmed video could not be created.'));
 			}
 		});
 
