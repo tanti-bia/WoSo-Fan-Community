@@ -2507,6 +2507,42 @@ body > p
 	display: none;
 }
 
+.prediction-scoring-rules
+{
+	margin: 22px 0 28px;
+	padding: 18px 20px;
+	border: 1px solid var(--green-300);
+	border-radius: 16px;
+	background: var(--surface-muted);
+	color: var(--text);
+}
+
+.prediction-scoring-rules h2
+{
+	margin: 0 0 10px;
+	color: var(--green-900);
+}
+
+.prediction-scoring-rules ul
+{
+	display: grid;
+	gap: 6px;
+	margin: 0;
+	padding-left: 22px;
+}
+
+.prediction-scoring-rules strong
+{
+	color: var(--green-800);
+}
+
+.prediction-total-points
+{
+	margin: 14px 0 0 !important;
+	padding-top: 12px;
+	border-top: 1px solid var(--line);
+}
+
 .prediction-form h2,
 .prediction-form p
 {
@@ -2579,6 +2615,11 @@ body > p
 	border-top: 1px solid var(--line);
 	color: var(--green-800) !important;
 	font-weight: 700;
+}
+
+.prediction-result-summary
+{
+	line-height: 1.7;
 }
 
 .report-details

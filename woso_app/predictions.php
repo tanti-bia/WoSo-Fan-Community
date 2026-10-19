@@ -6,6 +6,46 @@ require_once __DIR__ . '/database.php';
 require_once __DIR__ . '/football_api.php';
 require_once __DIR__ . '/match_view.php';
 
+function predictions_read_goal_score(array $team): ?int
+{
+	$score = $team['score'] ?? null;
+	if (is_array($score)) {
+		$score = $score['current'] ?? $score['display'] ?? null;
+	}
+
+	return is_numeric($score) && (float) $score >= 0 ? (int) $score : null;
+}
+
+function predictions_points_for_match(?array $prediction, array $fixture): ?int
+{
+	$homeActual = predictions_read_goal_score($fixture['home'] ?? []);
+	$awayActual = predictions_read_goal_score($fixture['away'] ?? []);
+	if ($homeActual === null || $awayActual === null) {
+		return null;
+	}
+	if ($prediction === null) {
+		return 0;
+	}
+
+	$homePredicted = (int) $prediction['home_score'];
+	$awayPredicted = (int) $prediction['away_score'];
+	$points = 0;
+	if ((($homePredicted - $awayPredicted) <=> 0) === (($homeActual - $awayActual) <=> 0)) {
+		$points += 3;
+	}
+	if ($homePredicted === $homeActual) {
+		$points += 2;
+	}
+	if ($awayPredicted === $awayActual) {
+		$points += 2;
+	}
+	if ($homePredicted - $awayPredicted === $homeActual - $awayActual) {
+		$points += 3;
+	}
+
+	return $points;
+}
+
 $matchError = '';
 $matchWarning = '';
 $actionError = '';
@@ -14,6 +54,9 @@ $useLocalMatchTime = football_match_user_has_location();
 $upcomingMatches = [];
 $finishedMatches = [];
 $userPredictions = [];
+$predictionPointsByEvent = [];
+$totalPredictionPoints = 0;
+$scoredFinishedMatchCount = 0;
 $database = null;
 
 try {
@@ -91,6 +134,16 @@ try {
 		foreach ($predictionQuery->fetchAll() as $prediction) {
 			$userPredictions[(string) $prediction['event_id']] = $prediction;
 		}
+		foreach ($finishedMatches as $finishedMatch) {
+			$eventId = (string) ($finishedMatch['id'] ?? '');
+			$prediction = $userPredictions[$eventId] ?? null;
+			$points = predictions_points_for_match($prediction, $finishedMatch);
+			if ($points !== null) {
+				$predictionPointsByEvent[$eventId] = $points;
+				$totalPredictionPoints += $points;
+				$scoredFinishedMatchCount++;
+			}
+		}
 	}
 } catch (PDOException $exception) {
 	error_log('WoSo predictions database error: ' . $exception->getMessage());
@@ -130,6 +183,18 @@ try {
 		<p class="home-eyebrow">Make your matchday call</p>
 		<h1>Predictions</h1>
 		<p>Select an upcoming match, enter a score for each team, and submit your prediction. You can change it any time before kickoff.</p>
+		<section class="prediction-scoring-rules" aria-labelledby="prediction-scoring-heading">
+			<h2 id="prediction-scoring-heading">How points are scored</h2>
+			<ul>
+				<li>Correctly predict the winner or a draw: <strong>+3 points</strong></li>
+				<li>Correctly predict the home team’s goals: <strong>+2 points</strong></li>
+				<li>Correctly predict the away team’s goals: <strong>+2 points</strong></li>
+				<li>Correctly predict the goal difference: <strong>+3 points</strong></li>
+			</ul>
+			<?php if (isset($_SESSION['user_id'])): ?>
+				<p class="prediction-total-points">Your total: <strong><?= (int) $totalPredictionPoints ?> points</strong> across <?= (int) $scoredFinishedMatchCount ?> finished matches with final scores.</p>
+			<?php endif; ?>
+		</section>
 
 		<?php if (!isset($_SESSION['user_id'])): ?>
 			<p class="visitor-prompt">Sign in to take part in predictions. <a href="login.php?redirect=predictions.php">Sign in</a></p>
@@ -189,7 +254,9 @@ try {
 						<?php foreach ($finishedMatches as $match): ?>
 							<?php $eventId = (string) ($match['id'] ?? ''); ?>
 							<?php $prediction = isset($_SESSION['user_id']) ? ($userPredictions[$eventId] ?? []) : null; ?>
-							<?php render_football_match_card($match, false, $useLocalMatchTime, $prediction, false); ?>
+							<?php $points = $prediction === [] ? 0 : ($predictionPointsByEvent[$eventId] ?? null); ?>
+							<?php $pointsPending = $prediction !== [] && $points === null; ?>
+							<?php render_football_match_card($match, false, $useLocalMatchTime, $prediction, false, $points, $pointsPending); ?>
 						<?php endforeach; ?>
 					</ul>
 				<?php else: ?>

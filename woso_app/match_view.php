@@ -55,7 +55,7 @@ function football_match_user_has_location(): bool
 	}
 }
 
-function render_football_match_card(array $fixture, bool $featured = false, bool $useLocalTime = false, ?array $prediction = null, bool $predictionSelectable = true): void
+function render_football_match_card(array $fixture, bool $featured = false, bool $useLocalTime = false, ?array $prediction = null, bool $predictionSelectable = true, ?int $predictionPoints = null, bool $predictionPointsPending = false): void
 {
 	$isLive = football_match_is_live($fixture);
 	$isFinished = football_match_is_finished($fixture);
@@ -123,6 +123,11 @@ function render_football_match_card(array $fixture, bool $featured = false, bool
 					Your prediction: <?= escape_html((string) $prediction['home_score'] . ' – ' . (string) $prediction['away_score']) ?>
 				<?php else: ?>
 					<?= $selectable ? 'Select match to predict' : 'You did not submit a prediction for this match.' ?>
+				<?php endif; ?>
+				<?php if (!$selectable && $predictionPointsPending): ?>
+					<br>Points pending final score
+				<?php elseif (!$selectable && $predictionPoints !== null): ?>
+					<br>Points earned: <?= (int) $predictionPoints ?>
 				<?php endif; ?>
 			</p>
 		<?php endif; ?>
