@@ -91,13 +91,14 @@ http_response_code($status);
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="icon" type="image/png" href="assets/woso-logo.png">
 	<title>Reset your password</title>
 	<link rel="stylesheet" href="styles.css">
 	<script src="back_button.js" defer></script>
 </head>
 <body>
 	<main class="auth-card">
-		<a class="auth-home-link" href="home.html">Women's Football Community</a>
+		<a class="auth-home-link" href="home.html"><img src="assets/woso-logo.png" alt="">Women's Football Community</a>
 		<h1><?= $isSignedIn ? 'Change your password' : 'Reset your password' ?></h1>
 		<p class="auth-intro"><?= $isSignedIn
 			? 'We’ll send a password reset link to the email address on your account.'

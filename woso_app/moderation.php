@@ -157,12 +157,14 @@ try {
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="icon" type="image/png" href="assets/woso-logo.png">
 	<title>Women's Football - Moderation</title>
 	<link rel="stylesheet" href="styles.css">
 	<script src="back_button.js" defer></script>
 </head>
 <body>
 	<nav class="topnav" aria-label="Main navigation">
+		<a class="site-logo" href="home.php" aria-label="Women's Football Community home"><img src="assets/woso-logo.png" alt=""></a>
 		<a href="home.html">Home</a><a href="matches.php">Match Center</a><?= community_nav_link() ?>
 		<a href="predictions.php">Predictions</a><?= notifications_nav_link() ?>
 		<?= moderation_nav_link(true) ?><?= account_nav_link() ?>

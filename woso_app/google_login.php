@@ -18,12 +18,14 @@ if ($config === null) {
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="icon" type="image/png" href="assets/woso-logo.png">
 		<title>Google sign-in unavailable</title>
 		<link rel="stylesheet" href="styles.css">
 		<script src="back_button.js" defer></script>
 	</head>
 	<body>
 		<main class="auth-card">
+			<a class="auth-home-link" href="home.html"><img src="assets/woso-logo.png" alt="">Women's Football Community</a>
 			<h1>Google sign-in is not configured</h1>
 			<p>Set the Google OAuth environment variables in the server configuration, then try again.</p>
 			<p><a href="login.php">Return to sign in</a></p>

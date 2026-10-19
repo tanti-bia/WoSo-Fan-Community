@@ -4739,3 +4739,37 @@ video.community-message-media
 	background-color: #e3f0e5;
 	color: #1d3823;
 }
+
+.topnav a.site-logo
+{
+	display: inline-flex;
+	flex: 0 0 48px;
+	align-items: center;
+	justify-content: center;
+	min-height: 48px;
+	padding: 4px;
+}
+
+.topnav a.site-logo img
+{
+	display: block;
+	width: 40px;
+	height: 40px;
+	object-fit: contain;
+	filter: brightness(0) invert(1);
+}
+
+.auth-home-link
+{
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.auth-home-link img
+{
+	display: block;
+	width: 48px;
+	height: 48px;
+	object-fit: contain;
+}

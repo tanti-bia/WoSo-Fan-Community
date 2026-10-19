@@ -76,12 +76,14 @@ http_response_code($status);
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="icon" type="image/png" href="assets/woso-logo.png">
 	<title>Women's Football - Account</title>
 	<link rel="stylesheet" href="styles.css">
 	<script src="back_button.js" defer></script>
 </head>
 <body>
 	<nav class="topnav" aria-label="Main navigation">
+		<a class="site-logo" href="home.php" aria-label="Women's Football Community home"><img src="assets/woso-logo.png" alt=""></a>
 		<a href="home.html">Home</a>
 		<a href="matches.php">Match Center</a>
 		<?= community_nav_link() ?>
@@ -91,7 +93,7 @@ http_response_code($status);
 		<?= account_nav_link(true) ?>
 	</nav>
 	<main class="auth-card">
-		<a class="auth-home-link" href="home.html">Women's Football Community</a>
+		<a class="auth-home-link" href="home.html"><img src="assets/woso-logo.png" alt="">Women's Football Community</a>
 		<?php if (isset($_SESSION['user_id'])): ?>
 			<h1>Your account</h1>
 			<p class="auth-intro">Manage your account from your profile page.</p>

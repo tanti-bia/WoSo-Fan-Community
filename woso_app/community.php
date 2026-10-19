@@ -411,6 +411,7 @@ http_response_code($status);
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="icon" type="image/png" href="assets/woso-logo.png">
 	<title>Women's Football - Community</title>
 	<link rel="stylesheet" href="styles.css?v=<?= (string) filemtime(__DIR__ . '/styles.css') ?>">
 	<script src="back_button.js" defer></script>
@@ -419,6 +420,7 @@ http_response_code($status);
 </head>
 <body>
 	<nav class="topnav" aria-label="Main navigation">
+		<a class="site-logo" href="home.php" aria-label="Women's Football Community home"><img src="assets/woso-logo.png" alt=""></a>
 		<a href="home.php">Home</a>
 		<a href="matches.php">Match Center</a>
 		<?= community_nav_link(true) ?>

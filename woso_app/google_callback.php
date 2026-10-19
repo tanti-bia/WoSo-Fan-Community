@@ -77,12 +77,14 @@ http_response_code($status);
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="icon" type="image/png" href="assets/woso-logo.png">
 	<title>Google sign-in</title>
 	<link rel="stylesheet" href="styles.css">
 	<script src="back_button.js" defer></script>
 </head>
 <body>
 	<main class="auth-card">
+		<a class="auth-home-link" href="home.html"><img src="assets/woso-logo.png" alt="">Women's Football Community</a>
 		<h1>Unable to sign in with Google</h1>
 		<p class="auth-message auth-error" role="alert"><?= escape_html($error) ?></p>
 		<p><a href="login.php">Return to sign in</a></p>
