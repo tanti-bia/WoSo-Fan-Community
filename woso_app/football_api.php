@@ -367,6 +367,53 @@ function football_match_date_time(array $fixture): ?DateTimeImmutable
 	}
 }
 
+function football_api_ensure_endpoint_cache(PDO $database): void
+{
+	$database->exec(
+		'CREATE TABLE IF NOT EXISTS football_match_endpoint_cache
+		(
+			cache_key CHAR(64) NOT NULL,
+			fixtures_json LONGTEXT NOT NULL,
+			fetched_at BIGINT UNSIGNED NOT NULL,
+			PRIMARY KEY (cache_key)
+		) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci'
+	);
+}
+
+function football_api_saved_endpoint_fixtures(PDO $database, string $cacheKey, int $leagueId, string $direction): ?array
+{
+	$endpointKey = hash('sha256', $cacheKey . ':' . $leagueId . ':' . $direction);
+	$query = $database->prepare('SELECT fixtures_json FROM football_match_endpoint_cache WHERE cache_key = :cache_key');
+	$query->execute(['cache_key' => $endpointKey]);
+	$fixturesJson = $query->fetchColumn();
+	if (!is_string($fixturesJson)) {
+		return null;
+	}
+	try {
+		$fixtures = json_decode($fixturesJson, true, 512, JSON_THROW_ON_ERROR);
+		return is_array($fixtures) && array_is_list($fixtures) ? $fixtures : null;
+	} catch (JsonException $exception) {
+		error_log('WoSo match data warning: unable to decode a saved league response.');
+		return null;
+	}
+}
+
+function football_api_store_endpoint_fixtures(PDO $database, string $cacheKey, int $leagueId, string $direction, array $fixtures): void
+{
+	$endpointKey = hash('sha256', $cacheKey . ':' . $leagueId . ':' . $direction);
+	$fixturesJson = json_encode(array_values($fixtures), JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+	$query = $database->prepare(
+		'INSERT INTO football_match_endpoint_cache (cache_key, fixtures_json, fetched_at)
+		VALUES (:cache_key, :fixtures_json, :fetched_at)
+		ON DUPLICATE KEY UPDATE fixtures_json = VALUES(fixtures_json), fetched_at = VALUES(fetched_at)'
+	);
+	$query->execute([
+		'cache_key' => $endpointKey,
+		'fixtures_json' => $fixturesJson,
+		'fetched_at' => time(),
+	]);
+}
+
 /**
  * @return array{fixtures: list<array>, warning: ?string}
  */
@@ -380,17 +427,23 @@ function football_api_shared_fixtures(PDO $database): array
 			cache_key CHAR(64) NOT NULL,
 			fixtures_json LONGTEXT NOT NULL,
 			fetched_at BIGINT UNSIGNED NOT NULL,
+			warning_text TEXT NULL,
 			PRIMARY KEY (cache_key)
 		) ENGINE=InnoDB
 			DEFAULT CHARACTER SET utf8mb4
 			COLLATE utf8mb4_unicode_ci'
 	);
+	$warningColumn = $database->query("SHOW COLUMNS FROM football_match_cache LIKE 'warning_text'")->fetch();
+	if ($warningColumn === false) {
+		$database->exec('ALTER TABLE football_match_cache ADD COLUMN warning_text TEXT NULL');
+	}
+	football_api_ensure_endpoint_cache($database);
 	football_api_ensure_finished_match_table($database);
 
 	$leagueIds = football_api_league_ids();
 	$cacheKey = hash('sha256', 'thesportsdb:' . football_api_key() . ':' . implode(',', $leagueIds));
 	$cacheQuery = $database->prepare(
-		'SELECT fixtures_json, fetched_at
+		'SELECT fixtures_json, fetched_at, warning_text
 		FROM football_match_cache
 		WHERE cache_key = :cache_key'
 	);
@@ -398,9 +451,13 @@ function football_api_shared_fixtures(PDO $database): array
 	$cachedRow = $cacheQuery->fetch();
 	$cachedFixtures = null;
 	$cachedAt = 0;
+	$cachedWarning = null;
 
 	if ($cachedRow !== false) {
 		$cachedAt = (int) $cachedRow['fetched_at'];
+		$cachedWarning = is_string($cachedRow['warning_text'] ?? null) && $cachedRow['warning_text'] !== ''
+			? (string) $cachedRow['warning_text']
+			: null;
 		try {
 			$decodedFixtures = json_decode((string) $cachedRow['fixtures_json'], true, 512, JSON_THROW_ON_ERROR);
 			if (is_array($decodedFixtures) && array_is_list($decodedFixtures)) {
@@ -416,80 +473,104 @@ function football_api_shared_fixtures(PDO $database): array
 	if ($cachedFixtures !== null && $cachedAt >= time() - 300) {
 		return [
 			'fixtures' => football_api_merge_finished_matches($cachedFixtures, football_api_saved_finished_matches($database)),
-			'warning' => null,
+			'warning' => $cachedWarning,
 		];
 	}
 
-	try {
-		$fixtures = [];
-		// The free daily endpoint returns only a small global sample, most of which
-		// may be outside the configured leagues. Use the league-specific schedules
-		// so a refresh always includes the selected competitions.
-		foreach ($leagueIds as $leagueId) {
-			foreach (['past', 'next'] as $direction) {
+	$fixtures = [];
+	$failedRequests = 0;
+	$staleEndpoints = 0;
+	$successfulRequests = 0;
+	// Keep each league/direction response separately. One failed request then
+	// falls back to its own last good data without discarding fresh responses.
+	foreach ($leagueIds as $leagueId) {
+		foreach (['past', 'next'] as $direction) {
+			try {
 				$leagueEvents = football_api_events_for_league($leagueId, $direction);
-				foreach (football_api_league_fixtures($leagueEvents, $leagueId) as $fixture) {
+				$endpointFixtures = football_api_league_fixtures($leagueEvents, $leagueId);
+				$successfulRequests++;
+				try {
+					football_api_store_endpoint_fixtures($database, $cacheKey, $leagueId, $direction, $endpointFixtures);
+				} catch (PDOException $exception) {
+					error_log('WoSo match data warning: unable to save league ' . $leagueId . ' ' . $direction . ' response. ' . $exception->getMessage());
+				}
+				foreach ($endpointFixtures as $fixture) {
 					$fixtures[football_match_fixture_key($fixture)] = $fixture;
+				}
+			} catch (RuntimeException $exception) {
+				$failedRequests++;
+				error_log('WoSo match data warning: league ' . $leagueId . ' ' . $direction . ' refresh failed. ' . $exception->getMessage());
+				$staleFixtures = football_api_saved_endpoint_fixtures($database, $cacheKey, $leagueId, $direction);
+				if ($staleFixtures === null && $cachedFixtures !== null) {
+					$staleFixtures = array_values(array_filter(
+						$cachedFixtures,
+						static fn ($fixture): bool => is_array($fixture)
+							&& (int) ($fixture['league']['id'] ?? 0) === $leagueId
+					));
+				}
+				if ($staleFixtures !== null) {
+					$staleEndpoints++;
+					foreach ($staleFixtures as $fixture) {
+						if (is_array($fixture)) {
+							$fixtures[football_match_fixture_key($fixture)] = $fixture;
+						}
+					}
 				}
 			}
 		}
-		$fixtures = array_values($fixtures);
-		football_api_store_finished_matches($database, $fixtures);
+	}
+	$fixtures = array_values($fixtures);
+	if ($successfulRequests === 0 && $staleEndpoints === 0 && $cachedFixtures === null) {
 		$savedFinishedMatches = football_api_saved_finished_matches($database);
-		$fixturesJson = json_encode($fixtures, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+		return [
+			'fixtures' => $savedFinishedMatches,
+			'warning' => $savedFinishedMatches === []
+				? 'Live results unavailable. No matches have been saved yet; please try again later.'
+				: 'Live results unavailable. Showing finished matches saved in the database.',
+		];
+	}
 
-		$storeQuery = $database->prepare(
-			'INSERT INTO football_match_cache (cache_key, fixtures_json, fetched_at)
-			VALUES (:cache_key, :fixtures_json, :fetched_at)
-			ON DUPLICATE KEY UPDATE
-				fixtures_json = VALUES(fixtures_json),
-				fetched_at = VALUES(fetched_at)'
-		);
-		try {
-			$storeQuery->execute([
-				'cache_key' => $cacheKey,
-				'fixtures_json' => $fixturesJson,
-				'fetched_at' => time(),
-			]);
-		} catch (PDOException $exception) {
-			error_log('WoSo match data warning: unable to save the shared fixture cache. ' . $exception->getMessage());
-			return [
-				'fixtures' => football_api_merge_finished_matches($fixtures, $savedFinishedMatches),
-				'warning' => 'Fixtures loaded, but could not be saved for reuse. Check database permissions.',
-			];
+	football_api_store_finished_matches($database, $fixtures);
+	$savedFinishedMatches = football_api_saved_finished_matches($database);
+	$fixturesJson = json_encode($fixtures, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+	$warning = null;
+	if ($failedRequests > 0) {
+		if ($successfulRequests > 0) {
+			$warning = 'Some live results could not be refreshed. Showing updated results plus saved data where requests failed (' . $failedRequests . ' request' . ($failedRequests === 1 ? '' : 's') . ').';
+		} elseif ($fixtures !== []) {
+			$warning = 'Live results unavailable. Showing the last saved matches; ' . $failedRequests . ' refresh request' . ($failedRequests === 1 ? ' failed.' : 's failed.');
+		} else {
+			$warning = 'Live results unavailable. No saved match data is available for the failed requests yet.';
 		}
+	}
 
+	$storeQuery = $database->prepare(
+		'INSERT INTO football_match_cache (cache_key, fixtures_json, fetched_at, warning_text)
+		VALUES (:cache_key, :fixtures_json, :fetched_at, :warning_text)
+		ON DUPLICATE KEY UPDATE
+			fixtures_json = VALUES(fixtures_json),
+			fetched_at = VALUES(fetched_at),
+			warning_text = VALUES(warning_text)'
+	);
+	try {
+		$storeQuery->execute([
+			'cache_key' => $cacheKey,
+			'fixtures_json' => $fixturesJson,
+			'fetched_at' => time(),
+			'warning_text' => $warning,
+		]);
+	} catch (PDOException $exception) {
+		error_log('WoSo match data warning: unable to save the shared fixture cache. ' . $exception->getMessage());
 		return [
 			'fixtures' => football_api_merge_finished_matches($fixtures, $savedFinishedMatches),
-			'warning' => null,
+			'warning' => 'Fixtures loaded, but could not be saved for reuse. Check database permissions.',
 		];
-	} catch (RuntimeException $exception) {
-		if ($cachedFixtures === null) {
-			if (str_starts_with($exception->getMessage(), 'TheSportsDB ')) {
-				error_log('WoSo match data warning: TheSportsDB is unavailable and no shared fixture cache exists. ' . $exception->getMessage());
-				$savedFinishedMatches = football_api_saved_finished_matches($database);
-				return [
-					'fixtures' => $savedFinishedMatches,
-					'warning' => $savedFinishedMatches === []
-						? 'Live results unavailable. No matches have been saved yet; please try again later.'
-						: 'Live results unavailable. Showing finished matches saved in the database.',
-				];
-			}
-			throw $exception;
-		}
-
-		error_log('WoSo match data warning: fixture refresh failed; serving the shared cached fixtures. ' . $exception->getMessage());
-		$savedFinishedMatches = football_api_saved_finished_matches($database);
-		$fixtures = football_api_merge_finished_matches($cachedFixtures, $savedFinishedMatches);
-		return [
-			'fixtures' => $fixtures,
-			'warning' => $fixtures === []
-				? 'Live results unavailable. The last successful request found no matches for the selected leagues.'
-				: 'Live results unavailable. Showing matches from the last successful request and saved finished matches.',
-		];
-	} catch (JsonException $exception) {
-		throw new RuntimeException('TheSportsDB returned match data that could not be saved.', 0, $exception);
 	}
+
+	return [
+		'fixtures' => football_api_merge_finished_matches($fixtures, $savedFinishedMatches),
+		'warning' => $warning,
+	];
 }
 
 function football_match_is_cancelled(array $fixture): bool

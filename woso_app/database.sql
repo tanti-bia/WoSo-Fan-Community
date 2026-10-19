@@ -33,6 +33,17 @@ CREATE TABLE IF NOT EXISTS football_match_cache
 	cache_key CHAR(64) NOT NULL,
 	fixtures_json LONGTEXT NOT NULL,
 	fetched_at BIGINT UNSIGNED NOT NULL,
+	warning_text TEXT NULL,
+	PRIMARY KEY (cache_key)
+) ENGINE=InnoDB
+	DEFAULT CHARACTER SET utf8mb4
+	COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS football_match_endpoint_cache
+(
+	cache_key CHAR(64) NOT NULL,
+	fixtures_json LONGTEXT NOT NULL,
+	fetched_at BIGINT UNSIGNED NOT NULL,
 	PRIMARY KEY (cache_key)
 ) ENGINE=InnoDB
 	DEFAULT CHARACTER SET utf8mb4
