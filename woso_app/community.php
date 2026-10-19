@@ -89,15 +89,17 @@ try {
 		} else {
 			$action = post_string('action');
 			if ($action === 'start_direct') {
-				$otherUserIdRaw = post_string('other_user_id');
-				$otherUserId = ctype_digit($otherUserIdRaw) ? filter_var($otherUserIdRaw, FILTER_VALIDATE_INT) : false;
-				if (!is_int($otherUserId) || $otherUserId < 1 || $otherUserId === $userId) {
-					$error = 'Choose another member to start a chat.';
+				$otherUsername = trim(post_string('other_username'));
+				if ($otherUsername === '' || strlen($otherUsername) > 30) {
+					$error = 'Enter the username of the member you want to chat with.';
 				} else {
-					$userCheck = $database->prepare('SELECT user_id FROM users WHERE user_id = :user_id LIMIT 1');
-					$userCheck->execute(['user_id' => $otherUserId]);
-					if ($userCheck->fetchColumn() === false) {
-						$error = 'That member could not be found.';
+					$userCheck = $database->prepare('SELECT user_id FROM users WHERE username = :username LIMIT 1');
+					$userCheck->execute(['username' => $otherUsername]);
+					$otherUserId = (int) $userCheck->fetchColumn();
+					if ($otherUserId < 1) {
+						$error = 'No member was found with that username. Check the spelling and try again.';
+					} elseif ($otherUserId === $userId) {
+						$error = 'Enter another member’s username to start a chat.';
 					} else {
 						$directKey = hash('sha256', min($userId, $otherUserId) . ':' . max($userId, $otherUserId));
 						$database->beginTransaction();
@@ -375,13 +377,8 @@ http_response_code($status);
 					<form method="post" action="community.php">
 						<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
 						<input type="hidden" name="action" value="start_direct">
-						<label for="direct-user">Choose a member</label>
-						<select id="direct-user" name="other_user_id" required>
-							<option value="">Select a member</option>
-							<?php foreach ($users as $user): ?>
-								<option value="<?= (int) $user['user_id'] ?>"><?= escape_html((string) $user['username']) ?></option>
-							<?php endforeach; ?>
-						</select>
+						<label for="direct-username">Search by username</label>
+						<input id="direct-username" name="other_username" type="search" maxlength="30" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Type their username" required>
 						<button class="auth-button" type="submit">Open direct chat</button>
 					</form>
 				</section>
@@ -433,8 +430,9 @@ http_response_code($status);
 			<section class="community-chat-thread" aria-label="Selected conversation">
 				<?php if ($activeConversation === null): ?>
 					<div class="community-thread-empty">
+						<span class="community-empty-mark" aria-hidden="true">&#10022;</span>
 						<h2>Your conversations</h2>
-						<p>Choose a chat from the list, or start a new conversation.</p>
+						<p>Select a conversation to catch up, or start a new one with a member.</p>
 					</div>
 				<?php else: ?>
 					<?php
@@ -444,11 +442,16 @@ http_response_code($status);
 						: (string) ($activeConversation['participant_names'] ?? 'Direct chat');
 					?>
 					<header class="community-thread-heading">
-						<p class="home-eyebrow"><?= $activeIsGroup ? 'Group chat' : 'Direct chat' ?></p>
-						<h2><?= escape_html($activeTitle) ?></h2>
-						<?php if ($activeIsGroup && !empty($activeConversation['participant_names'])): ?>
-							<p><?= escape_html((string) $activeConversation['participant_names']) ?></p>
-						<?php endif; ?>
+						<span class="community-thread-avatar<?= $activeIsGroup ? ' is-group' : '' ?>" aria-hidden="true"><?= $activeIsGroup ? 'G' : 'DM' ?></span>
+						<div class="community-thread-details">
+							<p class="home-eyebrow"><?= $activeIsGroup ? 'Group conversation' : 'Private conversation' ?></p>
+							<h2><?= escape_html($activeTitle) ?></h2>
+							<?php if ($activeIsGroup && !empty($activeConversation['participant_names'])): ?>
+								<p><?= escape_html((string) $activeConversation['participant_names']) ?></p>
+							<?php else: ?>
+								<p>Just you and <?= escape_html($activeTitle) ?></p>
+							<?php endif; ?>
+						</div>
 					</header>
 					<div class="community-message-list" aria-live="polite" aria-label="Messages">
 						<?php if ($messages === []): ?>
@@ -457,7 +460,7 @@ http_response_code($status);
 							<?php foreach ($messages as $message): ?>
 								<?php $isOwnMessage = (int) $message['sender_id'] === $userId; ?>
 								<article class="community-message<?= $isOwnMessage ? ' is-own-message' : '' ?>">
-									<p class="community-message-meta"><strong><?= escape_html($isOwnMessage ? 'You' : (string) $message['username']) ?></strong> <time datetime="<?= escape_html((string) $message['created_at']) ?>"><?= escape_html(date('M j, Y g:i a', strtotime((string) $message['created_at']))) ?></time></p>
+									<p class="community-message-meta"><strong><?= escape_html($isOwnMessage ? 'You' : (string) $message['username']) ?></strong><time datetime="<?= escape_html((string) $message['created_at']) ?>"><?= escape_html(date('M j, Y g:i a', strtotime((string) $message['created_at']))) ?></time></p>
 									<p><?= nl2br(escape_html((string) $message['body'])) ?></p>
 								</article>
 							<?php endforeach; ?>
@@ -469,7 +472,10 @@ http_response_code($status);
 						<input type="hidden" name="chat_id" value="<?= $selectedChatId ?>">
 						<label for="message-body">Message</label>
 						<textarea id="message-body" name="body" maxlength="2000" rows="3" placeholder="Write a message…" required></textarea>
-						<button class="auth-button" type="submit">Send message</button>
+						<div class="community-composer-footer">
+							<span>Messages are shared with everyone in this conversation.</span>
+							<button class="auth-button" type="submit">Send message <span aria-hidden="true">&#10148;</span></button>
+						</div>
 					</form>
 				<?php endif; ?>
 			</section>
