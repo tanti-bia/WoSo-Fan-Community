@@ -56,6 +56,8 @@ HTML, CSS, JavaScript, PHP, MySQL/MariaDB, and optionally AJAX for dynamic inter
 
 Table               Main columns
 users               user_id (PK), username, email, password_hash, role
+pending_registrations username, email, password_hash, verification_token_hash, expires_at
+password_reset_requests user_id (FK), token_hash, expires_at, last_requested_at
 posts               post_id (PK), user_id (FK), content, media_path, media_type, created_at, status
 comments            comment_id (PK), post_id (FK), parent_comment_id (FK), user_id (FK), content, media_path, media_type, created_at, status
 post_likes          post_id (FK), user_id (FK), created_at
@@ -111,7 +113,15 @@ MySQL database with an external provider before deploying.
    environment variables. Add the HTTPS callback URL
    `https://<your-render-domain>/google_callback.php` to the OAuth client's
    authorized redirect URIs. Keep the client secret private.
-8. Match Center defaults to the NWSL, English WSL, Liga F, Première Ligue,
+8. Configure email confirmation by adding `WOSO_RESEND_API_KEY` and
+   `WOSO_EMAIL_FROM` in Render. Create a Resend API key and verify the sender
+   domain used by `WOSO_EMAIL_FROM` in Resend before accepting registrations.
+   Set `WOSO_APP_BASE_URL` to the site's public HTTPS origin. Keep the API key
+   private. New password-based accounts remain pending until the recipient
+   confirms the address; pending links expire after 24 hours. Existing accounts
+   are unchanged. Password reset links from the sign-in page or profile expire
+   after one hour and can be used once. Email delivery uses the [Resend email API](https://resend.com/docs/api-reference/emails/send-email).
+9. Match Center defaults to the NWSL, English WSL, Liga F, Première Ligue,
    Italy Serie A Women, Germany Women's Bundesliga, Sweden Damallsvenskan,
    Norway Toppserien, and Women's Champions League. To change the competitions,
    set `WOSO_THESPORTSDB_LEAGUE_IDS` to a comma-separated list of TheSportsDB

@@ -3,8 +3,10 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/database.php';
+require_once __DIR__ . '/email_delivery.php';
 
 $error = '';
+$notice = '';
 $username = '';
 $email = '';
 $status = 200;
@@ -27,42 +29,97 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	} elseif ($password !== $confirmPassword) {
 		$error = 'The passwords do not match.';
 	} else {
+		$database = null;
 		try {
 			$database = database_connection();
+			ensure_pending_registrations_table($database);
+			$redirectTarget = auth_return_target();
+			$token = bin2hex(random_bytes(32));
+			$tokenHash = hash('sha256', $token);
 			$database->beginTransaction();
-			$query = $database->prepare(
-				'INSERT INTO users (username, email, password_hash, role)
-				VALUES (:username, :email, :password_hash, :role)'
-			);
-			$query->execute([
-				'username' => $username,
-				'email' => $email,
-				'password_hash' => password_hash($password, PASSWORD_DEFAULT),
-				'role' => 'Member',
-			]);
+			$database->exec('DELETE FROM pending_registrations WHERE expires_at <= UTC_TIMESTAMP()');
 
-			$userId = (int) $database->lastInsertId();
-			$database->commit();
-			sign_in_user([
-				'user_id' => $userId,
-				'username' => $username,
-				'email' => $email,
-				'role' => 'Member',
-			]);
-			header('Location: ' . auth_return_target());
-			exit;
+			$existingUserQuery = $database->prepare(
+				'SELECT user_id FROM users WHERE email = :email OR username = :username LIMIT 1'
+			);
+			$existingUserQuery->execute(['email' => $email, 'username' => $username]);
+			if ($existingUserQuery->fetch()) {
+				$database->rollBack();
+				$error = 'That username or email address is already registered. Sign in if you already have an account.';
+			} else {
+				$pendingQuery = $database->prepare(
+					'SELECT pending_registration_id, username, email,
+						TIMESTAMPDIFF(SECOND, last_requested_at, UTC_TIMESTAMP()) AS seconds_since_request
+					FROM pending_registrations
+					WHERE email = :email OR username = :username
+					LIMIT 1 FOR UPDATE'
+				);
+				$pendingQuery->execute(['email' => $email, 'username' => $username]);
+				$pending = $pendingQuery->fetch();
+				$passwordHash = password_hash($password, PASSWORD_DEFAULT);
+				if ($pending) {
+					if (strcasecmp((string) $pending['email'], $email) !== 0
+						|| strcasecmp((string) $pending['username'], $username) !== 0) {
+						$database->rollBack();
+						$error = 'That username or email address is already awaiting confirmation.';
+					} elseif ((int) $pending['seconds_since_request'] < 60) {
+						$database->rollBack();
+						$notice = 'A confirmation email was requested recently. Wait a minute before requesting another.';
+					} else {
+						$update = $database->prepare(
+							'UPDATE pending_registrations
+							SET password_hash = :password_hash, verification_token_hash = :token_hash,
+								redirect_target = :redirect_target, expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL 24 HOUR),
+								last_requested_at = UTC_TIMESTAMP()
+							WHERE pending_registration_id = :pending_id'
+						);
+						$update->execute([
+							'password_hash' => $passwordHash,
+							'token_hash' => $tokenHash,
+							'redirect_target' => $redirectTarget,
+							'pending_id' => $pending['pending_registration_id'],
+						]);
+						$database->commit();
+					}
+				} else {
+					$insert = $database->prepare(
+						'INSERT INTO pending_registrations
+							(username, email, password_hash, verification_token_hash, redirect_target, expires_at, last_requested_at)
+						VALUES (:username, :email, :password_hash, :token_hash, :redirect_target,
+							DATE_ADD(UTC_TIMESTAMP(), INTERVAL 24 HOUR), UTC_TIMESTAMP())'
+					);
+					$insert->execute([
+						'username' => $username,
+						'email' => $email,
+						'password_hash' => $passwordHash,
+						'token_hash' => $tokenHash,
+						'redirect_target' => $redirectTarget,
+					]);
+					$database->commit();
+				}
+
+				if ($error === '' && $notice === '') {
+					$verificationUrl = email_verification_base_url()
+						. '/verify_email.php?token=' . rawurlencode($token);
+					send_email_verification($email, $username, $verificationUrl);
+					$notice = 'Check your inbox for a confirmation link. It expires in 24 hours. You can submit this form again to resend it.';
+				}
+			}
 		} catch (PDOException $exception) {
-			if (isset($database) && $database->inTransaction()) {
+			if ($database instanceof PDO && $database->inTransaction()) {
 				$database->rollBack();
 			}
-
 			if ($exception->getCode() === '23000') {
-				$error = 'That username or email address is already registered.';
+				$error = 'That username or email address is already registered. Sign in if you already have an account.';
 			} else {
 				error_log('WoSo registration database error: ' . $exception->getMessage());
-				$error = 'Account creation is temporarily unavailable. Please check the database setup and try again.';
+				$error = 'Account setup is temporarily unavailable. Please try again later.';
 				$status = 503;
 			}
+		} catch (RuntimeException $exception) {
+			error_log('WoSo verification email error: ' . $exception->getMessage());
+			$error = 'Your details are saved, but the confirmation email could not be sent. Check the email service configuration, wait one minute, then submit the form again to retry.';
+			$status = 503;
 		}
 	}
 }
@@ -82,9 +139,12 @@ http_response_code($status);
 	<main class="auth-card">
 		<a class="auth-home-link" href="home.html">Women's Football Community</a>
 		<h1>Create an account</h1>
-		<p class="auth-intro">New accounts start with Member access. You can request Moderator access from your profile after signing in.</p>
+		<p class="auth-intro">We’ll email you a confirmation link. Your account is created after you confirm your address.</p>
 		<?php if ($error !== ''): ?>
 			<p class="auth-message auth-error" role="alert"><?= escape_html($error) ?></p>
+		<?php endif; ?>
+		<?php if ($notice !== ''): ?>
+			<p class="auth-message auth-success" role="status"><?= escape_html($notice) ?></p>
 		<?php endif; ?>
 		<form action="register.php" method="post">
 			<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
@@ -97,7 +157,7 @@ http_response_code($status);
 			<input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required>
 			<label for="confirm-password">Confirm password</label>
 			<input id="confirm-password" name="confirm_password" type="password" autocomplete="new-password" minlength="8" required>
-			<button class="auth-button" type="submit">Create account</button>
+			<button class="auth-button" type="submit">Send confirmation email</button>
 		</form>
 		<p class="auth-register-link">Already have an account? <a href="login.php">Sign in</a></p>
 	</main>

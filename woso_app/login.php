@@ -115,6 +115,7 @@ http_response_code($status);
 				<input id="password" name="password" type="password" autocomplete="current-password" required>
 				<button class="auth-button" type="submit">Sign in</button>
 			</form>
+			<p class="auth-register-link"><a href="request_password_reset.php">Forgot your password?</a></p>
 			<p class="auth-intro">Or sign in with</p>
 			<?php if (GOOGLE_SIGN_IN_ENABLED): ?>
 				<a class="auth-button google-button" href="google_login.php?redirect=<?= rawurlencode(auth_return_target()) ?>">Continue with Google</a>

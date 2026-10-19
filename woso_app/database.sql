@@ -28,6 +28,42 @@ CREATE TABLE IF NOT EXISTS users
 	DEFAULT CHARACTER SET utf8mb4
 	COLLATE utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS pending_registrations
+(
+	pending_registration_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	username VARCHAR(30) NOT NULL,
+	email VARCHAR(254) NOT NULL,
+	password_hash VARCHAR(255) NOT NULL,
+	verification_token_hash CHAR(64) NOT NULL,
+	redirect_target VARCHAR(32) NOT NULL DEFAULT 'home.php',
+	expires_at DATETIME NOT NULL,
+	last_requested_at DATETIME NOT NULL,
+	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (pending_registration_id),
+	UNIQUE KEY pending_registrations_username_unique (username),
+	UNIQUE KEY pending_registrations_email_unique (email),
+	UNIQUE KEY pending_registrations_token_unique (verification_token_hash),
+	KEY pending_registrations_expiry (expires_at)
+) ENGINE=InnoDB
+	DEFAULT CHARACTER SET utf8mb4
+	COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS password_reset_requests
+(
+	user_id INT UNSIGNED NOT NULL,
+	token_hash CHAR(64) NOT NULL,
+	expires_at DATETIME NOT NULL,
+	last_requested_at DATETIME NOT NULL,
+	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (user_id),
+	UNIQUE KEY password_reset_token_unique (token_hash),
+	KEY password_reset_expiry (expires_at),
+	CONSTRAINT password_reset_user_fk FOREIGN KEY (user_id)
+		REFERENCES users (user_id) ON DELETE CASCADE
+) ENGINE=InnoDB
+	DEFAULT CHARACTER SET utf8mb4
+	COLLATE utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS football_match_cache
 (
 	cache_key CHAR(64) NOT NULL,
