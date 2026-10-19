@@ -14,6 +14,7 @@ unset($_SESSION['community_notice']);
 $users = [];
 $conversations = [];
 $messages = [];
+$activeParticipants = [];
 $communityNotifications = [];
 $unreadCommunityCount = 0;
 $activeConversation = null;
@@ -259,16 +260,25 @@ try {
 				 WHERE recipient_user_id = :recipient_user_id AND chat_id = :chat_id AND read_at IS NULL'
 			);
 			$markNotificationsRead->execute(['recipient_user_id' => $userId, 'chat_id' => $selectedChatId]);
+			$participantsQuery = $database->prepare(
+				' SELECT users.user_id, users.username, users.display_name, users.profile_image_path
+				 FROM chat_members
+				 INNER JOIN users ON users.user_id = chat_members.user_id
+				 WHERE chat_members.chat_id = :chat_id AND chat_members.user_id <> :current_user_id
+				 ORDER BY COALESCE(NULLIF(users.display_name, \'\'), users.username), users.username'
+			);
+			$participantsQuery->execute(['chat_id' => $selectedChatId, 'current_user_id' => $userId]);
+			$activeParticipants = $participantsQuery->fetchAll();
 			$messageQuery = $database->prepare(
-				'SELECT chat_messages.message_id, chat_messages.sender_id, chat_messages.body, chat_messages.created_at, users.username
+				'SELECT chat_messages.message_id, chat_messages.sender_id, chat_messages.body,
+					chat_messages.created_at, users.username, users.display_name, users.profile_image_path
 				FROM chat_messages
 			INNER JOIN users ON users.user_id = chat_messages.sender_id
 			WHERE chat_messages.chat_id = :chat_id
-			ORDER BY chat_messages.message_id DESC
-			LIMIT 100'
+			ORDER BY chat_messages.message_id ASC'
 			);
 			$messageQuery->execute(['chat_id' => $selectedChatId]);
-			$messages = array_reverse($messageQuery->fetchAll());
+			$messages = $messageQuery->fetchAll();
 		}
 	}
 
@@ -311,6 +321,7 @@ http_response_code($status);
 	<title>Women's Football - Community</title>
 	<link rel="stylesheet" href="styles.css">
 	<script src="back_button.js" defer></script>
+	<script src="community_chat.js" defer></script>
 </head>
 <body>
 	<nav class="topnav" aria-label="Main navigation">
@@ -437,30 +448,50 @@ http_response_code($status);
 				<?php else: ?>
 					<?php
 					$activeIsGroup = $activeConversation['chat_type'] === 'group';
+					$directParticipant = $activeParticipants[0] ?? null;
 					$activeTitle = $activeIsGroup
 						? (string) $activeConversation['title']
-						: (string) ($activeConversation['participant_names'] ?? 'Direct chat');
+						: (string) (($directParticipant['display_name'] ?? '') ?: ($directParticipant['username'] ?? 'Direct chat'));
 					?>
 					<header class="community-thread-heading">
-						<span class="community-thread-avatar<?= $activeIsGroup ? ' is-group' : '' ?>" aria-hidden="true"><?= $activeIsGroup ? 'G' : 'DM' ?></span>
+						<?php if ($activeIsGroup): ?>
+							<span class="community-thread-avatar is-group" aria-hidden="true">G</span>
+						<?php elseif (is_array($directParticipant) && !empty($directParticipant['profile_image_path'])): ?>
+							<img class="community-thread-avatar" src="<?= escape_html((string) $directParticipant['profile_image_path']) ?>" alt="<?= escape_html($activeTitle) ?>'s profile picture">
+						<?php else: ?>
+							<span class="community-thread-avatar" aria-hidden="true"><?= escape_html(strtoupper(substr((string) ($directParticipant['username'] ?? 'D'), 0, 1))) ?></span>
+						<?php endif; ?>
 						<div class="community-thread-details">
 							<p class="home-eyebrow"><?= $activeIsGroup ? 'Group conversation' : 'Private conversation' ?></p>
 							<h2><?= escape_html($activeTitle) ?></h2>
-							<?php if ($activeIsGroup && !empty($activeConversation['participant_names'])): ?>
-								<p><?= escape_html((string) $activeConversation['participant_names']) ?></p>
+							<?php if ($activeIsGroup): ?>
+								<div class="community-participant-list" aria-label="Conversation members">
+									<?php foreach ($activeParticipants as $participant): ?>
+										<?php $participantName = (string) (($participant['display_name'] ?? '') ?: $participant['username']); ?>
+										<span class="community-participant">
+											<?php if (!empty($participant['profile_image_path'])): ?>
+												<img src="<?= escape_html((string) $participant['profile_image_path']) ?>" alt="" loading="lazy">
+											<?php else: ?>
+												<span class="community-participant-placeholder" aria-hidden="true"><?= escape_html(strtoupper(substr((string) $participant['username'], 0, 1))) ?></span>
+											<?php endif; ?>
+											<span class="community-participant-name"><?= escape_html($participantName) ?><small>@<?= escape_html((string) $participant['username']) ?></small></span>
+										</span>
+									<?php endforeach; ?>
+								</div>
 							<?php else: ?>
-								<p>Just you and <?= escape_html($activeTitle) ?></p>
+								<p>@<?= escape_html((string) ($directParticipant['username'] ?? '')) ?></p>
 							<?php endif; ?>
 						</div>
 					</header>
-					<div class="community-message-list" aria-live="polite" aria-label="Messages">
+					<div id="community-message-list" class="community-message-list" aria-live="polite" aria-label="Messages">
 						<?php if ($messages === []): ?>
 							<p class="community-empty">No messages yet. Say hello!</p>
 						<?php else: ?>
 							<?php foreach ($messages as $message): ?>
 								<?php $isOwnMessage = (int) $message['sender_id'] === $userId; ?>
+								<?php $messageDisplayName = (string) (($message['display_name'] ?? '') ?: $message['username']); ?>
 								<article class="community-message<?= $isOwnMessage ? ' is-own-message' : '' ?>">
-									<p class="community-message-meta"><strong><?= escape_html($isOwnMessage ? 'You' : (string) $message['username']) ?></strong><time datetime="<?= escape_html((string) $message['created_at']) ?>"><?= escape_html(date('M j, Y g:i a', strtotime((string) $message['created_at']))) ?></time></p>
+									<p class="community-message-meta"><strong><?= escape_html($isOwnMessage ? 'You' : $messageDisplayName) ?></strong><span>@<?= escape_html((string) $message['username']) ?></span><time datetime="<?= escape_html((string) $message['created_at']) ?>"><?= escape_html(date('M j, Y g:i a', strtotime((string) $message['created_at']))) ?></time></p>
 									<p><?= nl2br(escape_html((string) $message['body'])) ?></p>
 								</article>
 							<?php endforeach; ?>
