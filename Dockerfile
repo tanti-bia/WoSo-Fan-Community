@@ -11,7 +11,7 @@ COPY docker/entrypoint.sh /usr/local/bin/woso-entrypoint
 COPY docker/uploads.ini /usr/local/etc/php/conf.d/uploads.ini
 
 RUN chmod 0755 /usr/local/bin/woso-entrypoint \
-	&& mkdir -p /var/www/html/uploads/posts /var/www/html/uploads/profiles \
+	&& mkdir -p /var/www/html/uploads/posts /var/www/html/uploads/profiles /var/www/html/uploads/groups /var/www/html/uploads/chats \
 	&& chown -R www-data:www-data /var/www/html/uploads
 
 EXPOSE 10000

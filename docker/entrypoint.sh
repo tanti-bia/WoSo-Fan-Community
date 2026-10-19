@@ -16,8 +16,8 @@ fi
 sed -i "s/^Listen 80$/Listen ${port}/" /etc/apache2/ports.conf
 sed -i "s/<VirtualHost \*:80>/<VirtualHost *:${port}>/" /etc/apache2/sites-available/000-default.conf
 
-mkdir -p /var/www/html/uploads/posts /var/www/html/uploads/profiles
-chown www-data:www-data /var/www/html/uploads /var/www/html/uploads/posts /var/www/html/uploads/profiles
-chmod 0755 /var/www/html/uploads /var/www/html/uploads/posts /var/www/html/uploads/profiles
+mkdir -p /var/www/html/uploads/posts /var/www/html/uploads/profiles /var/www/html/uploads/groups /var/www/html/uploads/chats
+chown www-data:www-data /var/www/html/uploads /var/www/html/uploads/posts /var/www/html/uploads/profiles /var/www/html/uploads/groups /var/www/html/uploads/chats
+chmod 0755 /var/www/html/uploads /var/www/html/uploads/posts /var/www/html/uploads/profiles /var/www/html/uploads/groups /var/www/html/uploads/chats
 
 exec "$@"

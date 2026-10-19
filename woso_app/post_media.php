@@ -1,8 +1,13 @@
 <?php
 declare(strict_types=1);
 
-function store_post_media(string $field, string &$error, int &$status): ?array
+function store_post_media(string $field, string &$error, int &$status, string $directoryName = 'posts'): ?array
 {
+	if (!preg_match('/\A[a-z0-9_-]+\z/', $directoryName)) {
+		$error = 'The selected file could not be saved. Please try again later.';
+		$status = 500;
+		return null;
+	}
 	$media = $_FILES[$field] ?? null;
 	$uploadError = $media === null
 		? UPLOAD_ERR_NO_FILE
@@ -60,7 +65,7 @@ function store_post_media(string $field, string &$error, int &$status): ?array
 		return null;
 	}
 
-	$uploadDirectory = __DIR__ . '/uploads/posts';
+	$uploadDirectory = __DIR__ . '/uploads/' . $directoryName;
 	try {
 		if (!is_dir($uploadDirectory)
 			&& !mkdir($uploadDirectory, 0755, true)
@@ -81,7 +86,7 @@ function store_post_media(string $field, string &$error, int &$status): ?array
 	}
 
 	return [
-		'path' => 'uploads/posts/' . $storedFileName,
+		'path' => 'uploads/' . $directoryName . '/' . $storedFileName,
 		'type' => $mediaDetails['type'],
 		'absolute_path' => $absolutePath,
 	];

@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/database.php';
+require_once __DIR__ . '/post_media.php';
+require_once __DIR__ . '/profile_media.php';
 require_signed_in('community.php');
 
 $userId = (int) $_SESSION['user_id'];
@@ -20,6 +22,8 @@ $unreadCommunityCount = 0;
 $activeConversation = null;
 $selectedChatId = 0;
 $status = 200;
+$pendingGroupImage = null;
+$pendingChatMedia = null;
 
 try {
 	$database = database_connection();
@@ -29,6 +33,7 @@ try {
 			chat_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			chat_type ENUM(\'direct\', \'group\') NOT NULL,
 			title VARCHAR(100) NULL,
+			group_image_path VARCHAR(255) NULL,
 			direct_key CHAR(64) NULL,
 			created_by INT UNSIGNED NOT NULL,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -56,6 +61,8 @@ try {
 			chat_id BIGINT UNSIGNED NOT NULL,
 			sender_id INT UNSIGNED NOT NULL,
 			body VARCHAR(2000) NOT NULL,
+			media_path VARCHAR(255) NULL,
+			media_type ENUM(\'image\', \'video\') NULL,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (message_id),
 			KEY chat_messages_history (chat_id, message_id),
@@ -171,42 +178,112 @@ try {
 						exit;
 					}
 				}
+			} elseif ($action === 'update_group_details') {
+				$chatIdRaw = post_string('chat_id');
+				$chatId = ctype_digit($chatIdRaw) ? filter_var($chatIdRaw, FILTER_VALIDATE_INT) : false;
+				$title = trim(post_string('group_title'));
+				$removeGroupImage = post_string('remove_group_image') === '1';
+				if (!is_int($chatId) || $chatId < 1) {
+					$error = 'Choose a valid group chat.';
+					$status = 400;
+				} elseif ($title === '' || strlen($title) > 100) {
+					$error = 'Enter a group name of up to 100 characters.';
+					$status = 400;
+				} else {
+					$groupCheck = $database->prepare(
+						'SELECT chats.chat_id, chats.group_image_path FROM chats
+						 INNER JOIN chat_members ON chat_members.chat_id = chats.chat_id
+						 WHERE chats.chat_id = :chat_id AND chat_members.user_id = :user_id
+						 AND chats.chat_type = \'group\' LIMIT 1'
+					);
+					$groupCheck->execute(['chat_id' => $chatId, 'user_id' => $userId]);
+					$groupRecord = $groupCheck->fetch(PDO::FETCH_ASSOC);
+					if ($groupRecord === false) {
+						$error = 'You do not have access to edit that group.';
+						$status = 403;
+					} else {
+						$oldGroupImagePath = $groupRecord['group_image_path'];
+						$pendingGroupImage = store_group_image($error, $status);
+						if ($error === '') {
+							$newGroupImagePath = $pendingGroupImage['path'] ?? ($removeGroupImage ? null : $oldGroupImagePath);
+							$updateGroup = $database->prepare(
+								'UPDATE chats SET title = :title, group_image_path = :group_image_path
+								 WHERE chat_id = :chat_id AND chat_type = \'group\''
+							);
+							$updateGroup->execute([
+								'title' => $title,
+								'group_image_path' => $newGroupImagePath,
+								'chat_id' => $chatId,
+							]);
+							if ($pendingGroupImage !== null || $removeGroupImage) {
+								if (is_string($oldGroupImagePath)
+									&& preg_match('~^uploads/groups/[a-f0-9]{32}\.(?:jpg|png|webp)$~D', $oldGroupImagePath)) {
+									$oldAbsolutePath = __DIR__ . '/' . $oldGroupImagePath;
+									if (is_file($oldAbsolutePath) && !unlink($oldAbsolutePath)) {
+										error_log('WoSo group image cleanup error: the previous image could not be removed.');
+									}
+								}
+							}
+							$pendingGroupImage = null;
+							$_SESSION['community_notice'] = 'Group details updated.';
+							header('Location: community.php?chat_id=' . $chatId);
+							exit;
+						}
+					}
+				}
 			} elseif ($action === 'send_message') {
 				$chatIdRaw = post_string('chat_id');
 				$chatId = ctype_digit($chatIdRaw) ? filter_var($chatIdRaw, FILTER_VALIDATE_INT) : false;
 				$body = trim(post_string('body'));
 				if (!is_int($chatId) || $chatId < 1) {
 					$error = 'Choose a chat before sending a message.';
-				} elseif ($body === '' || strlen($body) > 2000) {
-					$error = 'Messages must contain between 1 and 2,000 characters.';
+				} elseif (strlen($body) > 2000) {
+					$error = 'Messages can contain up to 2,000 characters.';
 				} else {
 					$membership = $database->prepare('SELECT 1 FROM chat_members WHERE chat_id = :chat_id AND user_id = :user_id LIMIT 1');
 					$membership->execute(['chat_id' => $chatId, 'user_id' => $userId]);
 					if ($membership->fetchColumn() === false) {
 						$error = 'You do not have access to that chat.';
 					} else {
-						$database->beginTransaction();
-						$send = $database->prepare('INSERT INTO chat_messages (chat_id, sender_id, body) VALUES (:chat_id, :sender_id, :body)');
-						$send->execute(['chat_id' => $chatId, 'sender_id' => $userId, 'body' => $body]);
-						$messageId = (int) $database->lastInsertId();
-						$notifyMembers = $database->prepare(
-							'INSERT INTO community_notifications
-								(recipient_user_id, actor_user_id, chat_id, message_id, notification_type)
-							 SELECT user_id, :actor_user_id, :notification_chat_id, :message_id, \'message\'
-							 FROM chat_members
-							 WHERE chat_id = :members_chat_id AND user_id <> :sender_user_id'
-						);
-						$notifyMembers->execute([
-							'actor_user_id' => $userId,
-							'notification_chat_id' => $chatId,
-							'message_id' => $messageId,
-							'members_chat_id' => $chatId,
-							'sender_user_id' => $userId,
-						]);
-						$database->commit();
-						$_SESSION['community_notice'] = 'Message sent.';
-						header('Location: community.php?chat_id=' . $chatId);
-						exit;
+						$pendingChatMedia = store_post_media('chat_media', $error, $status, 'chats');
+						if ($error === '' && $body === '' && $pendingChatMedia === null) {
+							$error = 'Write a message or attach a photo or video before sending.';
+							$status = 400;
+						}
+						if ($error === '') {
+							$database->beginTransaction();
+							$send = $database->prepare(
+								'INSERT INTO chat_messages (chat_id, sender_id, body, media_path, media_type)
+								 VALUES (:chat_id, :sender_id, :body, :media_path, :media_type)'
+							);
+							$send->execute([
+								'chat_id' => $chatId,
+								'sender_id' => $userId,
+								'body' => $body,
+								'media_path' => $pendingChatMedia['path'] ?? null,
+								'media_type' => $pendingChatMedia['type'] ?? null,
+							]);
+							$messageId = (int) $database->lastInsertId();
+							$notifyMembers = $database->prepare(
+								'INSERT INTO community_notifications
+									(recipient_user_id, actor_user_id, chat_id, message_id, notification_type)
+								 SELECT user_id, :actor_user_id, :notification_chat_id, :message_id, \'message\'
+								 FROM chat_members
+								 WHERE chat_id = :members_chat_id AND user_id <> :sender_user_id'
+							);
+							$notifyMembers->execute([
+								'actor_user_id' => $userId,
+								'notification_chat_id' => $chatId,
+								'message_id' => $messageId,
+								'members_chat_id' => $chatId,
+								'sender_user_id' => $userId,
+							]);
+							$database->commit();
+							$pendingChatMedia = null;
+							$_SESSION['community_notice'] = 'Message sent.';
+							header('Location: community.php?chat_id=' . $chatId);
+							exit;
+						}
 					}
 				}
 			} else {
@@ -221,12 +298,17 @@ try {
 	$users = $usersQuery->fetchAll();
 
 	$conversationsQuery = $database->prepare(
-		' SELECT chats.chat_id, chats.chat_type, chats.title, chats.created_at,
+		' SELECT chats.chat_id, chats.chat_type, chats.title, chats.group_image_path, chats.created_at,
 			(SELECT GROUP_CONCAT(member_user.username ORDER BY member_user.username SEPARATOR \', \')
 			 FROM chat_members AS participants
 			 INNER JOIN users AS member_user ON member_user.user_id = participants.user_id
 			 WHERE participants.chat_id = chats.chat_id AND participants.user_id <> :participant_user_id) AS participant_names,
-			(SELECT chat_messages.body FROM chat_messages WHERE chat_messages.chat_id = chats.chat_id
+			(SELECT CASE
+				 WHEN chat_messages.body <> \'\' THEN chat_messages.body
+				 WHEN chat_messages.media_type = \'image\' THEN \'Photo\'
+				 WHEN chat_messages.media_type = \'video\' THEN \'Video\'
+				 ELSE \'\' END
+			 FROM chat_messages WHERE chat_messages.chat_id = chats.chat_id
 			 ORDER BY chat_messages.message_id DESC LIMIT 1) AS last_message,
 			(SELECT chat_messages.created_at FROM chat_messages WHERE chat_messages.chat_id = chats.chat_id
 			 ORDER BY chat_messages.message_id DESC LIMIT 1) AS last_message_at
@@ -271,6 +353,7 @@ try {
 			$activeParticipants = $participantsQuery->fetchAll();
 			$messageQuery = $database->prepare(
 				'SELECT chat_messages.message_id, chat_messages.sender_id, chat_messages.body,
+					chat_messages.media_path, chat_messages.media_type,
 					chat_messages.created_at, users.username, users.display_name, users.profile_image_path
 				FROM chat_messages
 			INNER JOIN users ON users.user_id = chat_messages.sender_id
@@ -305,6 +388,16 @@ try {
 } catch (PDOException $exception) {
 	if (isset($database) && $database->inTransaction()) {
 		$database->rollBack();
+	}
+	if ($pendingGroupImage !== null && is_file($pendingGroupImage['absolute_path'])) {
+		if (!unlink($pendingGroupImage['absolute_path'])) {
+			error_log('WoSo group image cleanup error: an unsaved image could not be removed.');
+		}
+	}
+	if ($pendingChatMedia !== null && is_file($pendingChatMedia['absolute_path'])) {
+		if (!unlink($pendingChatMedia['absolute_path'])) {
+			error_log('WoSo chat media cleanup error: an unsaved attachment could not be removed.');
+		}
 	}
 	error_log('WoSo community chat database error: ' . $exception->getMessage());
 	$error = 'Community chats are temporarily unavailable. Check the chat tables in your database setup.';
@@ -389,7 +482,14 @@ http_response_code($status);
 						<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
 						<input type="hidden" name="action" value="start_direct">
 						<label for="direct-username">Search by username</label>
-						<input id="direct-username" name="other_username" type="search" maxlength="30" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Type their username" required>
+						<div class="community-user-search">
+							<input id="direct-username" name="other_username" type="search" maxlength="30" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Type their username" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="direct-user-suggestions" required>
+							<div id="direct-user-suggestions" class="community-user-suggestions" role="listbox" aria-label="Matching usernames" hidden>
+								<?php foreach ($users as $user): ?>
+									<button type="button" class="community-user-suggestion" role="option" data-username="<?= escape_html((string) $user['username']) ?>" hidden>@<?= escape_html((string) $user['username']) ?></button>
+								<?php endforeach; ?>
+							</div>
+						</div>
 						<button class="auth-button" type="submit">Open direct chat</button>
 					</form>
 				</section>
@@ -401,13 +501,17 @@ http_response_code($status);
 						<input type="hidden" name="action" value="create_group">
 						<label for="group-title">Group name</label>
 						<input id="group-title" name="group_title" type="text" maxlength="100" required>
-						<label for="group-members">Choose members</label>
-						<select id="group-members" name="member_ids[]" multiple size="7" required>
-							<?php foreach ($users as $user): ?>
-								<option value="<?= (int) $user['user_id'] ?>"><?= escape_html((string) $user['username']) ?></option>
-							<?php endforeach; ?>
-						</select>
-						<p class="community-form-help">Select 1–30 members. You will be included automatically.</p>
+						<label for="group-member-search">Search members by username</label>
+						<div class="community-user-search community-group-member-picker">
+							<div id="group-selected-members" class="community-selected-members" aria-live="polite"></div>
+							<input id="group-member-search" type="search" maxlength="30" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Type a username" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="group-member-suggestions">
+							<div id="group-member-suggestions" class="community-user-suggestions" role="listbox" aria-label="Matching group members" hidden>
+								<?php foreach ($users as $user): ?>
+									<button type="button" class="community-user-suggestion" role="option" data-user-id="<?= (int) $user['user_id'] ?>" data-username="<?= escape_html((string) $user['username']) ?>" hidden>@<?= escape_html((string) $user['username']) ?></button>
+								<?php endforeach; ?>
+							</div>
+						</div>
+						<p class="community-form-help">Choose 1–30 members from the suggestions. You will be included automatically.</p>
 						<button class="auth-button" type="submit">Create group</button>
 					</form>
 				</details>
@@ -428,8 +532,19 @@ http_response_code($status);
 								?>
 								<li>
 									<a class="community-chat-link<?= (int) $conversation['chat_id'] === $selectedChatId ? ' is-active' : '' ?>" href="community.php?chat_id=<?= (int) $conversation['chat_id'] ?>">
-										<strong><?= escape_html($chatTitle) ?></strong>
-										<span><?= escape_html($chatPreview !== '' ? $chatPreview : ($isGroup ? 'Group chat' : 'Direct chat')) ?></span>
+										<?php if ($isGroup): ?>
+											<span class="community-chat-list-avatar" aria-hidden="true">
+												<?php if (is_string($conversation['group_image_path']) && $conversation['group_image_path'] !== ''): ?>
+													<img src="<?= escape_html((string) $conversation['group_image_path']) ?>" alt="">
+												<?php else: ?>
+													<?= escape_html(strtoupper(substr($chatTitle, 0, 1))) ?>
+												<?php endif; ?>
+											</span>
+										<?php endif; ?>
+										<span class="community-chat-link-copy">
+											<strong><?= escape_html($chatTitle) ?></strong>
+											<span><?= escape_html($chatPreview !== '' ? $chatPreview : ($isGroup ? 'Group chat' : 'Direct chat')) ?></span>
+										</span>
 									</a>
 								</li>
 							<?php endforeach; ?>
@@ -452,12 +567,26 @@ http_response_code($status);
 					$activeTitle = $activeIsGroup
 						? (string) $activeConversation['title']
 						: (string) (($directParticipant['display_name'] ?? '') ?: ($directParticipant['username'] ?? 'Direct chat'));
+					$activeGroupImagePath = $activeIsGroup && is_string($activeConversation['group_image_path'] ?? null)
+						? (string) $activeConversation['group_image_path']
+						: '';
 					?>
 					<div id="community-chat-content" class="community-thread-content" data-chat-content>
 					<header class="community-thread-heading">
 						<?php if ($activeIsGroup): ?>
-							<p class="community-thread-type">Group conversation</p>
-							<h2 class="community-group-title"><?= escape_html($activeTitle) ?></h2>
+							<div class="community-group-heading">
+								<span class="community-group-avatar" aria-hidden="true">
+									<?php if ($activeGroupImagePath !== ''): ?>
+										<img src="<?= escape_html($activeGroupImagePath) ?>" alt="">
+									<?php else: ?>
+										<?= escape_html(strtoupper(substr($activeTitle, 0, 1))) ?>
+									<?php endif; ?>
+								</span>
+								<div class="community-group-heading-copy">
+									<p class="community-thread-type">Group conversation</p>
+									<h2 class="community-group-title"><?= escape_html($activeTitle) ?></h2>
+								</div>
+							</div>
 							<div class="community-participant-list" aria-label="Conversation members">
 								<?php foreach ($activeParticipants as $participant): ?>
 									<div class="post-author-identity community-participant-identity">
@@ -477,6 +606,23 @@ http_response_code($status);
 									</div>
 								<?php endforeach; ?>
 							</div>
+							<details class="community-group-settings">
+								<summary>Edit group details</summary>
+								<form method="post" enctype="multipart/form-data" action="community.php?chat_id=<?= $selectedChatId ?>">
+									<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
+									<input type="hidden" name="action" value="update_group_details">
+									<input type="hidden" name="chat_id" value="<?= $selectedChatId ?>">
+									<label for="group-edit-title">Group name</label>
+									<input id="group-edit-title" name="group_title" type="text" maxlength="100" value="<?= escape_html($activeTitle) ?>" required>
+									<label for="group-image">Group picture</label>
+									<input id="group-image" name="group_image" type="file" accept="image/jpeg,image/png,image/webp">
+									<p class="community-form-help">JPEG, PNG, or WebP; up to 5 MB.</p>
+									<?php if ($activeGroupImagePath !== ''): ?>
+										<label class="community-remove-group-image"><input type="checkbox" name="remove_group_image" value="1"> Remove current picture</label>
+									<?php endif; ?>
+									<button class="auth-button" type="submit">Save group details</button>
+								</form>
+							</details>
 						<?php else: ?>
 							<p class="community-thread-type">Private conversation</p>
 							<div class="post-author-identity community-contact-identity">
@@ -505,17 +651,39 @@ http_response_code($status);
 								<?php $messageDisplayName = (string) (($message['display_name'] ?? '') ?: $message['username']); ?>
 								<article class="community-message<?= $isOwnMessage ? ' is-own-message' : '' ?>">
 									<p class="community-message-meta"><strong><?= escape_html($isOwnMessage ? 'You' : $messageDisplayName) ?></strong><span>@<?= escape_html((string) $message['username']) ?></span><time datetime="<?= escape_html((string) $message['created_at']) ?>"><?= escape_html(date('M j, Y g:i a', strtotime((string) $message['created_at']))) ?></time></p>
-									<p><?= nl2br(escape_html((string) $message['body'])) ?></p>
+									<?php if (is_string($message['media_path']) && $message['media_path'] !== ''): ?>
+										<?php if ($message['media_type'] === 'image'): ?>
+											<a class="community-message-media-link" href="<?= escape_html((string) $message['media_path']) ?>" target="_blank" rel="noopener noreferrer">
+												<img class="community-message-media" src="<?= escape_html((string) $message['media_path']) ?>" alt="Photo shared by @<?= escape_html((string) $message['username']) ?>" loading="lazy">
+											</a>
+										<?php elseif ($message['media_type'] === 'video'): ?>
+											<video class="community-message-media" src="<?= escape_html((string) $message['media_path']) ?>" controls preload="metadata">Your browser does not support video playback.</video>
+										<?php endif; ?>
+									<?php endif; ?>
+									<?php if (trim((string) $message['body']) !== ''): ?>
+										<p><?= nl2br(escape_html((string) $message['body'])) ?></p>
+									<?php endif; ?>
 								</article>
 							<?php endforeach; ?>
 						<?php endif; ?>
 					</div>
-					<form class="community-message-form" method="post" action="community.php?chat_id=<?= $selectedChatId ?>">
+					<form class="community-message-form" method="post" enctype="multipart/form-data" action="community.php?chat_id=<?= $selectedChatId ?>">
 						<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
 						<input type="hidden" name="action" value="send_message">
 						<input type="hidden" name="chat_id" value="<?= $selectedChatId ?>">
-						<label for="message-body">Message</label>
-						<textarea id="message-body" name="body" maxlength="2000" rows="1" placeholder="Write a message..." required></textarea>
+						<label class="community-visually-hidden" for="message-body">Message</label>
+						<div class="community-composer-bubble">
+							<textarea id="message-body" name="body" maxlength="2000" rows="1" placeholder="Write a message..."></textarea>
+							<div class="community-composer-bubble-tools">
+								<span id="chat-attachment-name" class="community-attachment-name" aria-live="polite"></span>
+								<input class="community-attachment-input" id="chat-media" name="chat_media" type="file" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime,.mov" aria-label="Attach a photo or video" aria-describedby="chat-media-help">
+								<label class="community-attachment-button" for="chat-media" title="Attach a photo or video">
+									<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 12.5 14.7 6.3a3.2 3.2 0 0 1 4.5 4.5l-8.1 8.1a5 5 0 0 1-7.1-7.1l8.1-8.1"/><path d="m7.8 14.2 8.1-8.1"/></svg>
+									<span class="community-visually-hidden">Attach a photo or video</span>
+								</label>
+								<p id="chat-media-help" class="community-visually-hidden">JPEG, PNG, GIF, WebP, MP4, WebM, or MOV; up to 25 MB.</p>
+							</div>
+						</div>
 						<div class="community-composer-footer">
 							<span>Messages are shared with everyone in this conversation.</span>
 							<button class="auth-button" type="submit">Send message <span aria-hidden="true">&#10148;</span></button>

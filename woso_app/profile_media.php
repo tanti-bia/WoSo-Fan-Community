@@ -3,7 +3,22 @@ declare(strict_types=1);
 
 function store_profile_image(string &$error, int &$status): ?array
 {
-	$image = $_FILES['profile_image'] ?? null;
+	return store_validated_image('profile_image', 'profiles', 'profile picture', $error, $status);
+}
+
+function store_group_image(string &$error, int &$status): ?array
+{
+	return store_validated_image('group_image', 'groups', 'group picture', $error, $status);
+}
+
+function store_validated_image(string $fieldName, string $directoryName, string $imageLabel, string &$error, int &$status): ?array
+{
+	if (!preg_match('/\A[a-z0-9_-]+\z/', $directoryName)) {
+		$error = 'The image could not be saved. Please try again later.';
+		$status = 500;
+		return null;
+	}
+	$image = $_FILES[$fieldName] ?? null;
 	if ($image === null) {
 		return null;
 	}
@@ -17,7 +32,7 @@ function store_profile_image(string &$error, int &$status): ?array
 	}
 	if ($image['error'] !== UPLOAD_ERR_OK) {
 		$error = match ($image['error']) {
-			UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'The profile picture is too large. The maximum size is 5 MB.',
+			UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'The ' . $imageLabel . ' is too large. The maximum size is 5 MB.',
 			UPLOAD_ERR_PARTIAL => 'The image upload was incomplete. Please try again.',
 			UPLOAD_ERR_NO_TMP_DIR, UPLOAD_ERR_CANT_WRITE => 'The image could not be saved. Please try again later.',
 			default => 'The image could not be uploaded. Please choose another file and try again.',
@@ -34,7 +49,7 @@ function store_profile_image(string &$error, int &$status): ?array
 		return null;
 	}
 	if ($fileSize > 5 * 1024 * 1024) {
-		$error = 'The profile picture is too large. The maximum size is 5 MB.';
+		$error = 'The ' . $imageLabel . ' is too large. The maximum size is 5 MB.';
 		$status = 413;
 		return null;
 	}
@@ -59,7 +74,7 @@ function store_profile_image(string &$error, int &$status): ?array
 		return null;
 	}
 
-	$uploadDirectory = __DIR__ . '/uploads/profiles';
+	$uploadDirectory = __DIR__ . '/uploads/' . $directoryName;
 	try {
 		if (!is_dir($uploadDirectory)
 			&& !mkdir($uploadDirectory, 0755, true)
@@ -73,14 +88,14 @@ function store_profile_image(string &$error, int &$status): ?array
 			throw new RuntimeException('The uploaded profile image could not be saved.');
 		}
 	} catch (RuntimeException $exception) {
-		error_log('WoSo profile image upload error: ' . $exception->getMessage());
-		$error = 'The profile picture could not be saved. Please check the upload directory permissions and try again.';
+		error_log('WoSo image upload error: ' . $exception->getMessage());
+		$error = 'The ' . $imageLabel . ' could not be saved. Please check the upload directory permissions and try again.';
 		$status = 503;
 		return null;
 	}
 
 	return [
-		'path' => 'uploads/profiles/' . $storedFileName,
+		'path' => 'uploads/' . $directoryName . '/' . $storedFileName,
 		'absolute_path' => $absolutePath,
 	];
 }

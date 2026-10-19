@@ -1,0 +1,1 @@
+ALTER TABLE chats ADD COLUMN group_image_path VARCHAR(255) NULL AFTER title;

@@ -69,9 +69,9 @@ polls               poll_id (PK), created_by (FK), question, end_date
 poll_options        option_id (PK), poll_id (FK), option_text
 votes               vote_id (PK), poll_id (FK), option_id (FK), user_id (FK)
 predictions         user_id (FK), event_id, home_score, away_score, created_at, updated_at
-chats               chat_id (PK), chat_type, title, direct_key, created_by (FK), created_at
+chats               chat_id (PK), chat_type, title, group_image_path, direct_key, created_by (FK), created_at
 chat_members        chat_id (FK), user_id (FK), joined_at
-chat_messages       message_id (PK), chat_id (FK), sender_id (FK), body, created_at
+chat_messages       message_id (PK), chat_id (FK), sender_id (FK), body, media_path, media_type, created_at
 reports             report_id (PK), reporter_id (FK), post_id (FK), reason, status
 
 5. Deploying to Render
@@ -100,8 +100,10 @@ MySQL database with an external provider before deploying.
    browser; users do not need XAMPP.
 6. The Blueprint mounts persistent storage at `/var/www/html/uploads`. If
    migrating existing posts, transfer the files in `woso_app/uploads/posts`
-   into the mounted disk's `posts` directory and profile pictures from
-   `woso_app/uploads/profiles` into its `profiles` directory, as well as
+   into the mounted disk's `posts` directory, profile pictures from
+   `woso_app/uploads/profiles` into its `profiles` directory, and group pictures
+   from `woso_app/uploads/groups` into its `groups` directory, and chat
+   attachments from `woso_app/uploads/chats` into its `chats` directory, as well as
    importing the database. Uploaded media is not included in the Docker image.
    Keep future database backups and media backups independently.
 7. To enable Google sign-in, configure `WOSO_GOOGLE_CLIENT_ID`,
@@ -238,11 +240,19 @@ The Community page creates the `chats`, `chat_members`, `chat_messages`, and
 `woso_app/database.sql`; for an existing database, run the one-time setup script
 `woso_app/community_chat_migration.sql`. Notifications are created when a member
 is added to a group or receives a message, and are marked read when that member
-opens the related conversation.
+opens the related conversation. Group members can edit the group name and
+picture from the conversation header. For an existing database where the chat
+tables have already been created, apply `woso_app/group_chat_customization_migration.sql`
+once before deploying the group customization feature; new installations get
+the column from `database.sql` or `community_chat_migration.sql`. Members can
+attach one JPEG, PNG, GIF, WebP, MP4, WebM, or MOV file up to 25 MB to a chat
+message. For an existing chat database, apply
+`woso_app/chat_message_media_migration.sql` once before deploying attachments.
 Signed-in users can edit their public profile with a display name, bio, favorite
 team, location, and a JPEG, PNG, or WebP profile picture (up to 5 MB). Profile
 pictures are stored in `woso_app/uploads/profiles` or the persistent `uploads`
-directory in deployment. Profile fields are optional and do not alter account
+directory in deployment. Group pictures use `uploads/groups` on the persistent
+deployment disk. Profile fields are optional and do not alter account
 credentials.
 
 Signed-in users can publish text posts and attach one JPEG, PNG, GIF,
