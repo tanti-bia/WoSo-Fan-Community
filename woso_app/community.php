@@ -414,6 +414,7 @@ http_response_code($status);
 	<title>Women's Football - Community</title>
 	<link rel="stylesheet" href="styles.css?v=<?= (string) filemtime(__DIR__ . '/styles.css') ?>">
 	<script src="back_button.js" defer></script>
+	<script src="upload_preview.js" defer></script>
 	<script src="community_chat.js" defer></script>
 </head>
 <body>
@@ -676,17 +677,21 @@ http_response_code($status);
 							<textarea id="message-body" name="body" maxlength="2000" rows="1" placeholder="Write a message..."></textarea>
 							<div class="community-composer-bubble-tools">
 								<span id="chat-attachment-name" class="community-attachment-name" aria-live="polite"></span>
-								<input class="community-attachment-input" id="chat-media" name="chat_media" type="file" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime,.mov" aria-label="Attach a photo or video" aria-describedby="chat-media-help">
-								<label class="community-attachment-button" for="chat-media" title="Attach a photo or video">
-									<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 12.5 14.7 6.3a3.2 3.2 0 0 1 4.5 4.5l-8.1 8.1a5 5 0 0 1-7.1-7.1l8.1-8.1"/><path d="m7.8 14.2 8.1-8.1"/></svg>
-									<span class="community-visually-hidden">Attach a photo or video</span>
-								</label>
+								<div class="community-composer-icon-stack">
+									<button class="community-send-button" type="submit" aria-label="Send message" title="Send message">
+										<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11.5 21 3l-8.5 18-1.7-7.8L3 11.5Z"/><path d="m10.8 13.2 4.8-4.8"/></svg>
+									</button>
+									<input class="community-attachment-input" id="chat-media" name="chat_media" type="file" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime,.mov" aria-label="Attach a photo or video" aria-describedby="chat-media-help">
+									<label class="community-attachment-button" for="chat-media" title="Attach a photo or video">
+										<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 12.5 14.7 6.3a3.2 3.2 0 0 1 4.5 4.5l-8.1 8.1a5 5 0 0 1-7.1-7.1l8.1-8.1"/><path d="m7.8 14.2 8.1-8.1"/></svg>
+										<span class="community-visually-hidden">Attach a photo or video</span>
+									</label>
+								</div>
 								<p id="chat-media-help" class="community-visually-hidden">JPEG, PNG, GIF, WebP, MP4, WebM, or MOV; up to 25 MB.</p>
 							</div>
 						</div>
 						<div class="community-composer-footer">
 							<span>Messages are shared with everyone in this conversation.</span>
-							<button class="auth-button" type="submit">Send message <span aria-hidden="true">&#10148;</span></button>
 						</div>
 					</form>
 					</div>

@@ -3292,6 +3292,9 @@ body > p
 
 .community-thread-heading
 {
+	position: relative;
+	z-index: 5;
+	flex: 0 0 auto;
 	display: flex;
 	align-items: center;
 	gap: 15px;
@@ -4254,6 +4257,8 @@ body > p
 
 .community-group-settings
 {
+	position: relative;
+	z-index: 6;
 	padding-top: 10px;
 	border-top: 1px solid rgb(255 255 255 / 20%);
 }
@@ -4268,13 +4273,22 @@ body > p
 
 .community-group-settings > form
 {
+	position: absolute;
+	top: calc(100% + 8px);
+	right: 0;
+	z-index: 10;
+	box-sizing: border-box;
+	width: min(100%, 380px);
+	max-height: min(45vh, 340px);
+	overflow-y: auto;
 	display: grid;
 	gap: 8px;
-	margin-top: 10px;
+	margin-top: 0;
 	padding: 12px;
-	border: 1px solid rgb(255 255 255 / 20%);
+	border: 2px solid #9bb9a0;
 	border-radius: 12px;
-	background: rgb(255 255 255 / 8%);
+	background: #173b28;
+	box-shadow: 0 12px 28px rgb(0 0 0 / 28%);
 }
 
 .community-group-settings label
@@ -4444,4 +4458,128 @@ video.community-message-media
 {
 	outline: 2px solid var(--green-600);
 	outline-offset: 2px;
+}
+
+.community-composer-icon-stack
+{
+	display: flex;
+	flex: 0 0 auto;
+	flex-direction: column;
+	align-items: center;
+	gap: 5px;
+}
+
+.community-send-button,
+.community-composer-icon-stack .community-attachment-button
+{
+	display: grid;
+	width: 34px;
+	height: 34px;
+	flex: 0 0 34px;
+	place-items: center;
+	padding: 0;
+	border: 1px solid var(--green-300);
+	border-radius: 50%;
+	background: var(--surface-muted);
+	color: var(--green-800);
+	cursor: pointer;
+}
+
+.community-send-button:hover,
+.community-send-button:focus-visible,
+.community-composer-icon-stack .community-attachment-button:hover,
+.community-composer-icon-stack .community-attachment-button:focus-visible
+{
+	border-color: var(--green-600);
+	outline: 2px solid rgb(45 112 71 / 18%);
+	background: #d5e6d8;
+}
+
+.community-send-button svg,
+.community-composer-icon-stack .community-attachment-button svg
+{
+	width: 18px;
+	height: 18px;
+	fill: none;
+	stroke: currentColor;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-width: 1.8;
+}
+
+.post-composer-actions > div:first-child
+{
+	flex: 1 1 auto;
+}
+
+.composer-icon-stack
+{
+	position: relative;
+	display: flex;
+	flex: 0 0 auto;
+	flex-direction: column;
+	align-items: center;
+	gap: 5px;
+}
+
+.composer-send-button,
+.composer-attachment-button
+{
+	display: grid;
+	width: 34px;
+	height: 34px;
+	flex: 0 0 34px;
+	place-items: center;
+	padding: 0;
+	border: 1px solid var(--green-300);
+	border-radius: 50%;
+	background: var(--surface-muted);
+	color: var(--green-800);
+	cursor: pointer;
+}
+
+.composer-send-button:hover,
+.composer-send-button:focus-visible,
+.composer-attachment-button:hover,
+.composer-attachment-button:focus-visible
+{
+	border-color: var(--green-600);
+	outline: 2px solid rgb(45 112 71 / 18%);
+	background: #d5e6d8;
+}
+
+.composer-send-button svg,
+.composer-attachment-button svg
+{
+	width: 18px;
+	height: 18px;
+	fill: none;
+	stroke: currentColor;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-width: 1.8;
+}
+
+.composer-file-input
+{
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0 !important;
+	border: 0 !important;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+.composer-file-input:focus-visible + .composer-attachment-button
+{
+	outline: 2px solid var(--green-600);
+	outline-offset: 2px;
+}
+
+.post-comment-form .composer-icon-stack
+{
+	margin-left: 2px;
 }

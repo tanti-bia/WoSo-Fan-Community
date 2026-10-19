@@ -712,11 +712,18 @@ http_response_code($status);
 					<textarea id="post-content" name="content" maxlength="<?= MAX_POST_CONTENT_LENGTH ?>" placeholder="Share a thought about women's football..." rows="4"><?= escape_html(post_string('content')) ?></textarea>
 					<div class="post-composer-actions">
 						<div>
-							<label for="post-media">Add a photo or video</label>
-							<input id="post-media" name="media" type="file" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime">
 							<p class="post-hint">JPEG, PNG, GIF, WebP, MP4, WebM, or MOV. Up to 25 MB.</p>
 						</div>
-						<button class="auth-button" type="submit">Share post</button>
+						<div class="composer-icon-stack">
+							<button class="composer-send-button" type="submit" aria-label="Share post" title="Share post">
+								<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11.5 21 3l-8.5 18-1.7-7.8L3 11.5Z"/><path d="m10.8 13.2 4.8-4.8"/></svg>
+							</button>
+							<input class="composer-file-input" id="post-media" name="media" type="file" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime" aria-label="Add a photo or video">
+							<label class="composer-attachment-button" for="post-media" title="Add a photo or video">
+								<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 12.5 14.7 6.3a3.2 3.2 0 0 1 4.5 4.5l-8.1 8.1a5 5 0 0 1-7.1-7.1l8.1-8.1"/><path d="m7.8 14.2 8.1-8.1"/></svg>
+								<span class="visually-hidden">Add a photo or video</span>
+							</label>
+						</div>
 					</div>
 				</form>
 			</section>
@@ -920,9 +927,16 @@ http_response_code($status);
 									<input type="hidden" name="action" value="comment">
 									<label class="visually-hidden" for="comment-<?= escape_html($feedItemKey) ?>">Write a comment</label>
 									<input id="comment-<?= escape_html($feedItemKey) ?>" name="content" type="text" maxlength="<?= MAX_POST_CONTENT_LENGTH ?>" placeholder="Write a comment...">
-									<label class="comment-media-label" for="comment-media-<?= escape_html($feedItemKey) ?>">Photo/video</label>
-									<input id="comment-media-<?= escape_html($feedItemKey) ?>" class="comment-file-input" name="media" type="file" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime">
-									<button class="post-action" type="submit">Comment</button>
+									<div class="composer-icon-stack">
+										<button class="composer-send-button" type="submit" aria-label="Comment" title="Comment">
+											<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11.5 21 3l-8.5 18-1.7-7.8L3 11.5Z"/><path d="m10.8 13.2 4.8-4.8"/></svg>
+										</button>
+										<input id="comment-media-<?= escape_html($feedItemKey) ?>" class="comment-file-input composer-file-input" name="media" type="file" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime" aria-label="Attach a photo or video">
+										<label class="composer-attachment-button" for="comment-media-<?= escape_html($feedItemKey) ?>" title="Attach a photo or video">
+											<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 12.5 14.7 6.3a3.2 3.2 0 0 1 4.5 4.5l-8.1 8.1a5 5 0 0 1-7.1-7.1l8.1-8.1"/><path d="m7.8 14.2 8.1-8.1"/></svg>
+											<span class="visually-hidden">Attach a photo or video</span>
+										</label>
+									</div>
 								</form>
 							<?php endif; ?>
 						</article>

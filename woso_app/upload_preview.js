@@ -1,13 +1,13 @@
 (() => {
 	'use strict';
 
-	document.querySelectorAll('input[type="file"][accept*="image/"]').forEach((input) => {
+	document.querySelectorAll('input[type="file"][name="profile_image"], input[type="file"][name="group_image"]').forEach((input) => {
 		const form = input.form;
 		if (!form) {
 			return;
 		}
 
-		const isProfileImage = input.name === 'profile_image';
+		const isSquareAvatar = input.name === 'profile_image' || input.name === 'group_image';
 		const isImageFile = (file) => file.type.startsWith('image/')
 			|| /\.(?:jpe?g|png|gif|webp)$/i.test(file.name);
 		const preview = document.createElement('section');
@@ -16,7 +16,7 @@
 		preview.setAttribute('aria-label', 'Media preview');
 		preview.innerHTML = `
 			<p class="upload-preview-title">Preview before posting</p>
-			<div class="upload-preview-frame${isProfileImage ? ' is-square' : ''}" tabindex="0" aria-label="Drag the photo to choose which part to show">
+			<div class="upload-preview-frame${isSquareAvatar ? ' is-square' : ''}" tabindex="0" aria-label="Drag the photo to choose which part to show">
 				<img class="upload-preview-image" alt="Photo preview">
 			</div>
 			<div class="upload-preview-controls">
@@ -124,8 +124,8 @@
 			imageUrl = URL.createObjectURL(file);
 			image.onload = () => {
 				frameRatio = image.naturalWidth / image.naturalHeight;
-				frame.classList.toggle('is-square', isProfileImage);
-				if (!isProfileImage) {
+				frame.classList.toggle('is-square', isSquareAvatar);
+				if (!isSquareAvatar) {
 					frame.style.aspectRatio = String(frameRatio);
 					frame.style.width = `${Math.min(480, 640 * frameRatio)}px`;
 				}
@@ -205,7 +205,7 @@
 				const sourceY = (renderedHeight - height) * Number(vertical.value) / 100 / scale;
 				const sourceWidth = width / scale;
 				const sourceHeight = height / scale;
-				const outputMaxDimension = isProfileImage ? 1200 : 1600;
+				const outputMaxDimension = isSquareAvatar ? 1200 : 1600;
 				const outputScale = Math.min(1, outputMaxDimension / Math.max(sourceWidth, sourceHeight));
 				const canvas = document.createElement('canvas');
 				canvas.width = Math.max(1, Math.round(sourceWidth * outputScale));
