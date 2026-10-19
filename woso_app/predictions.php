@@ -80,6 +80,9 @@ try {
 	$upcomingMatches = $matchGroups['upcoming'];
 	$finishedMatches = $matchGroups['finished'];
 	$matchWarning = $matchData['warning'] ?? '';
+	if (can_access_moderation() && is_string($matchData['warning_admin'] ?? null)) {
+		$matchWarning = $matchData['warning_admin'];
+	}
 
 	if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		require_signed_in('predictions.php');

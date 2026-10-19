@@ -15,6 +15,9 @@ try {
 	$matchData = football_api_shared_fixtures(database_connection());
 	$matchGroups = football_match_groups($matchData['fixtures'], $now, 14, null);
 	$matchWarning = $matchData['warning'] ?? '';
+	if (can_access_moderation() && is_string($matchData['warning_admin'] ?? null)) {
+		$matchWarning = $matchData['warning_admin'];
+	}
 } catch (PDOException $exception) {
 	error_log('WoSo match data database error: ' . $exception->getMessage());
 	http_response_code(503);

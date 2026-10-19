@@ -473,7 +473,8 @@ function football_api_shared_fixtures(PDO $database): array
 	if ($cachedFixtures !== null && $cachedAt >= time() - 300) {
 		return [
 			'fixtures' => football_api_merge_finished_matches($cachedFixtures, football_api_saved_finished_matches($database)),
-			'warning' => $cachedWarning,
+			'warning' => $cachedWarning === null ? null : 'Some live results could not be refreshed',
+			'warning_admin' => $cachedWarning,
 		];
 	}
 
@@ -524,9 +525,10 @@ function football_api_shared_fixtures(PDO $database): array
 		$savedFinishedMatches = football_api_saved_finished_matches($database);
 		return [
 			'fixtures' => $savedFinishedMatches,
-			'warning' => $savedFinishedMatches === []
-				? 'Live results unavailable. No matches have been saved yet; please try again later.'
-				: 'Live results unavailable. Showing finished matches saved in the database.',
+			'warning' => 'Some live results could not be refreshed',
+			'warning_admin' => $savedFinishedMatches === []
+				? 'Live results unavailable. No matches have been saved yet; ' . $failedRequests . ' refresh request' . ($failedRequests === 1 ? ' failed.' : 's failed.')
+				: 'Live results unavailable. Showing finished matches saved in the database; ' . $failedRequests . ' refresh request' . ($failedRequests === 1 ? ' failed.' : 's failed.'),
 		];
 	}
 
@@ -536,11 +538,14 @@ function football_api_shared_fixtures(PDO $database): array
 	$warning = null;
 	if ($failedRequests > 0) {
 		if ($successfulRequests > 0) {
-			$warning = 'Some live results could not be refreshed. Showing updated results plus saved data where requests failed (' . $failedRequests . ' request' . ($failedRequests === 1 ? '' : 's') . ').';
+			$warning = 'Some live results could not be refreshed';
+			$adminWarning = 'Some live results could not be refreshed. Showing updated results plus saved data where requests failed (' . $failedRequests . ' request' . ($failedRequests === 1 ? '' : 's') . ').';
 		} elseif ($fixtures !== []) {
-			$warning = 'Live results unavailable. Showing the last saved matches; ' . $failedRequests . ' refresh request' . ($failedRequests === 1 ? ' failed.' : 's failed.');
+			$warning = 'Some live results could not be refreshed';
+			$adminWarning = 'Live results unavailable. Showing the last saved matches; ' . $failedRequests . ' refresh request' . ($failedRequests === 1 ? ' failed.' : 's failed.');
 		} else {
-			$warning = 'Live results unavailable. No saved match data is available for the failed requests yet.';
+			$warning = 'Some live results could not be refreshed';
+			$adminWarning = 'Live results unavailable. No saved match data is available for the failed requests yet (' . $failedRequests . ' failed request' . ($failedRequests === 1 ? '' : 's') . ').';
 		}
 	}
 
@@ -557,19 +562,21 @@ function football_api_shared_fixtures(PDO $database): array
 			'cache_key' => $cacheKey,
 			'fixtures_json' => $fixturesJson,
 			'fetched_at' => time(),
-			'warning_text' => $warning,
+			'warning_text' => $adminWarning ?? null,
 		]);
 	} catch (PDOException $exception) {
 		error_log('WoSo match data warning: unable to save the shared fixture cache. ' . $exception->getMessage());
 		return [
 			'fixtures' => football_api_merge_finished_matches($fixtures, $savedFinishedMatches),
-			'warning' => 'Fixtures loaded, but could not be saved for reuse. Check database permissions.',
+			'warning' => 'Some live results could not be refreshed',
+			'warning_admin' => 'Fixtures loaded, but could not be saved for reuse. Check database permissions.',
 		];
 	}
 
 	return [
 		'fixtures' => football_api_merge_finished_matches($fixtures, $savedFinishedMatches),
 		'warning' => $warning,
+		'warning_admin' => $adminWarning ?? null,
 	];
 }
 
