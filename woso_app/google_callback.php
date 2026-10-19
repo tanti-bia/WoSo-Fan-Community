@@ -5,7 +5,7 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/database.php';
 require_once __DIR__ . '/google_oauth.php';
 
-if (!GOOGLE_SIGN_IN_ENABLED) {
+if (!google_sign_in_enabled()) {
 	header('Location: login.php', true, 303);
 	exit;
 }

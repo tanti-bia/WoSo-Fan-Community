@@ -1,7 +1,13 @@
 <?php
 declare(strict_types=1);
 
-const GOOGLE_SIGN_IN_ENABLED = false;
+function google_sign_in_enabled(): bool
+{
+	$enabled = getenv('WOSO_GOOGLE_SIGN_IN_ENABLED');
+	return is_string($enabled)
+		&& strtolower(trim($enabled)) === 'true'
+		&& google_oauth_config() !== null;
+}
 
 function google_oauth_config(): ?array
 {

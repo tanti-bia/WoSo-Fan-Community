@@ -117,7 +117,7 @@ http_response_code($status);
 			</form>
 			<p class="auth-register-link"><a href="request_password_reset.php">Forgot your password?</a></p>
 			<p class="auth-intro">Or sign in with</p>
-			<?php if (GOOGLE_SIGN_IN_ENABLED): ?>
+			<?php if (google_sign_in_enabled()): ?>
 				<a class="auth-button google-button" href="google_login.php?redirect=<?= rawurlencode(auth_return_target()) ?>">Continue with Google</a>
 			<?php else: ?>
 				<button class="auth-button google-button" type="button" disabled>Continue with Google</button>

@@ -108,11 +108,9 @@ MySQL database with an external provider before deploying.
    attachments from `woso_app/uploads/chats` into its `chats` directory, as well as
    importing the database. Uploaded media is not included in the Docker image.
    Keep future database backups and media backups independently.
-7. To enable Google sign-in, configure `WOSO_GOOGLE_CLIENT_ID`,
-   `WOSO_GOOGLE_CLIENT_SECRET`, and `WOSO_GOOGLE_REDIRECT_URI` as Render
-   environment variables. Add the HTTPS callback URL
-   `https://<your-render-domain>/google_callback.php` to the OAuth client's
-   authorized redirect URIs. Keep the client secret private.
+7. To enable Google sign-in, follow the Google OAuth setup instructions below,
+   then set `WOSO_GOOGLE_SIGN_IN_ENABLED` to `true` in Render. Keep the client
+   secret private.
 8. Configure email confirmation by adding `WOSO_RESEND_API_KEY` and
    `WOSO_EMAIL_FROM` in Render. Create a Resend API key and verify the sender
    domain used by `WOSO_EMAIL_FROM` in Resend before accepting registrations.
@@ -280,19 +278,53 @@ and reposts. The menu displays an unread notification badge; opening
 Notifications marks alerts as read. Post owners and comment authors are notified
 about likes, comments/replies, and reposts on their content.
 
-To enable Google sign-in, create a Google OAuth 2.0 Web application client and
-add the callback URL for the environment to its authorized redirect URIs. For
-local XAMPP development, use
-`http://localhost/WoSo-Fan-Community/woso_app/google_callback.php`. For the
-hosted site, use its HTTPS URL, for example
-`https://example.com/google_callback.php`. Set
-`WOSO_GOOGLE_CLIENT_ID`, `WOSO_GOOGLE_CLIENT_SECRET`, and
-`WOSO_GOOGLE_REDIRECT_URI` in the PHP environment on the host. Keep the client
-secret private. Google sign-in creates new Member accounts and can link an
-existing account only when Google confirms the same email address.
-Google sign-in is currently disabled; to restore it later, set
-`GOOGLE_SIGN_IN_ENABLED` to `true` in `woso_app/google_oauth.php` after OAuth
-credentials and callback configuration are ready.
+### Google sign-in setup
+
+Google sign-in is implemented and is disabled until its environment settings
+are valid and `WOSO_GOOGLE_SIGN_IN_ENABLED` is set to `true`. The login page
+will only show an active Google button when all four settings are present and
+the callback URL passes validation.
+
+For the hosted Render site, the callback URL is
+`https://woso-fan-community.onrender.com/google_callback.php`. It must be
+entered exactly the same way in Google Cloud and Render. For local XAMPP, use
+`http://localhost/WoSo-Fan-Community/woso_app/google_callback.php` instead.
+
+To create the Google credentials:
+
+1. Open [Google Cloud Console](https://console.cloud.google.com/) and create
+   or select a project.
+2. Open **Google Auth Platform**. Configure the app name and support email on
+   **Branding**. On **Audience**, choose **External** if users outside your
+   Google Workspace should sign in. Leave the app in **Testing** initially and
+   add the Google accounts you want to test under **Test users**.
+3. On **Data Access**, use only the basic `openid`, `email`, and `profile`
+   identity scopes. The app does not need access to Gmail or Google Drive.
+4. Under **Clients**, create an **OAuth client ID** with application type
+   **Web application**. Add the callback URL above under **Authorized
+   redirect URIs**, then create the client. Copy the **Client ID** and
+   **Client secret**.
+5. In Render, open the `woso-fan-community` web service, then **Environment**.
+   Add or update these variables:
+   - `WOSO_GOOGLE_SIGN_IN_ENABLED` = `true`
+   - `WOSO_GOOGLE_CLIENT_ID` = the Client ID from Google Cloud
+   - `WOSO_GOOGLE_CLIENT_SECRET` = the Client secret from Google Cloud
+   - `WOSO_GOOGLE_REDIRECT_URI` =
+     `https://woso-fan-community.onrender.com/google_callback.php`
+6. Save the Render environment changes and wait for the service to redeploy.
+   Sign out, open the login page, and test with a Google account listed under
+   **Test users**. Confirm that the Google email is verified.
+
+Google sign-in can be tested in Testing mode without immediately publishing
+the app to everyone; only listed test users can use it in that mode. Google
+requires domain ownership verification for production brand verification.
+Because `onrender.com` is Render's shared domain, you cannot verify it as your
+own domain. If Google requires a verified authorized domain for your chosen
+configuration or you want a public production launch, you will need a domain
+you control, or a hosting setup on a domain you are authorized to verify.
+Google sign-in creates new Member accounts and can link an existing community
+account only when Google confirms the same email address. Keep the OAuth
+client secret private and never commit it to the repository.
 
 For an existing database, add the Google account identifier column before using
 Google sign-in:

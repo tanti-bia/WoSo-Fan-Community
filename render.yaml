@@ -25,6 +25,14 @@ services:
         sync: false
       - key: WOSO_EMAIL_FROM
         sync: false
+      - key: WOSO_GOOGLE_SIGN_IN_ENABLED
+        value: "false"
+      - key: WOSO_GOOGLE_CLIENT_ID
+        sync: false
+      - key: WOSO_GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: WOSO_GOOGLE_REDIRECT_URI
+        value: https://woso-fan-community.onrender.com/google_callback.php
       - key: WOSO_APP_BASE_URL
         value: https://woso-fan-community.onrender.com
       - key: WOSO_THESPORTSDB_LEAGUE_IDS
