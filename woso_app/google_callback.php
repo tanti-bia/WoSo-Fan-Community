@@ -53,7 +53,7 @@ if (isset($_GET['error'])) {
 		$user = google_oauth_find_or_create_user($database, $claims);
 		sign_in_user($user);
 
-		$allowedTargets = ['polls.php', 'predictions.php', 'community.php', 'profile.php', 'notifications.php', 'moderation.php'];
+		$allowedTargets = ['predictions.php', 'community.php', 'profile.php', 'notifications.php', 'moderation.php'];
 		if (!is_string($redirect) || !in_array($redirect, $allowedTargets, true)) {
 			$redirect = 'home.php';
 		}

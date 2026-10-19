@@ -53,7 +53,6 @@ function auth_return_target(): string
 		? post_string('redirect')
 		: (isset($_GET['redirect']) && is_string($_GET['redirect']) ? $_GET['redirect'] : '');
 	$allowedTargets = [
-		'polls.php',
 		'predictions.php',
 		'community.php',
 		'profile.php',
@@ -72,7 +71,6 @@ function require_signed_in(string $target): void
 	}
 
 	$allowedTargets = [
-		'polls.php',
 		'predictions.php',
 		'community.php',
 		'profile.php',

@@ -175,7 +175,6 @@ try {
 		<a href="home.html">Home</a>
 		<a href="matches.php">Match Center</a>
 		<?= community_nav_link() ?>
-		<a href="polls.php">Polls</a>
 		<a class="active" aria-current="page" href="predictions.php">Predictions</a>
 		<?= notifications_nav_link() ?>
 		<?= moderation_nav_link() ?>

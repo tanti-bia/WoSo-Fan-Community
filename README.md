@@ -1,6 +1,6 @@
 # WoSo-Fan-Community
 Overall functionality
-A social platform focused on women's football where fans can follow teams, share opinions, discuss matches, participate in polls, and predict results.
+A social platform focused on women's football where fans can follow teams, share opinions, discuss matches, and predict results.
 1. Pages, explanations, and functionalities
 Page: Home
 Functionalities and features: A public feed of community posts with text and photo/video media; the feed shows comment counts, and opening a post shows its comments. Signed-in members can publish, like, comment, and repost, while visitors can browse.
@@ -14,9 +14,6 @@ updates.
 Page: Community
 Functionalities and features: Signed-in members can start direct chats, create
 groups with selected members, and send messages in their conversations.
-
-Page: Polls
-Functionalities and features: Vote on questions about matches and players
 
 Page: Predictions
 Functionalities and features: Submit member score predictions for upcoming
@@ -42,7 +39,7 @@ Functionalities and features: Report posts and manage inappropriate content.
 
 Visitor: Browse public discussions
 
-Member: Publish posts, comment, vote, and submit predictions
+Member: Publish posts, comment, and submit predictions
 
 Moderator: Remove inappropriate content and review reports
 
@@ -67,9 +64,6 @@ comment_reposts    repost_id (PK), comment_id (FK), user_id (FK), created_at
 notifications       notification_id (PK), recipient_user_id (FK), actor_user_id (FK), post_id (FK), comment_id (FK), target_comment_id (FK), notification_type, read_at, created_at
 teams               team_id (PK), team_name, country
 user_favorites      user_id (FK), team_id (FK)
-polls               poll_id (PK), created_by (FK), question, end_date
-poll_options        option_id (PK), poll_id (FK), option_text
-votes               vote_id (PK), poll_id (FK), option_id (FK), user_id (FK)
 predictions         user_id (FK), event_id, home_score, away_score, created_at, updated_at
 chats               chat_id (PK), chat_type, title, group_image_path, direct_key, created_by (FK), created_at
 chat_members        chat_id (FK), user_id (FK), joined_at
@@ -145,8 +139,8 @@ and open `http://localhost/WoSo-Fan-Community/`. Local XAMPP defaults are for
 development only.
 
 Home, Community, and Match Center are available to visitors.
-Polls, Predictions, and Notifications are viewable while signed
-out; visitors can browse Polls and Predictions but must sign in to participate.
+Predictions and Notifications are viewable while signed out; visitors can browse
+Predictions but must sign in to participate.
 Profile requires an account, and Moderation requires an Administrator account.
 Signed-in users can report posts and profiles with a required reason. Reports
 are reviewed in the administrator Moderation page; administrators can dismiss

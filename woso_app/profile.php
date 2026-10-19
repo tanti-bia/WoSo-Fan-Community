@@ -71,6 +71,7 @@ if ($isRequestingModerator) {
 		}
 	}
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
+	$profile['username'] = trim(post_string('username'));
 	$profile['display_name'] = trim(post_string('display_name'));
 	$profile['bio'] = trim(post_string('bio'));
 	$profile['favorite_team'] = trim(post_string('favorite_team'));
@@ -79,6 +80,9 @@ if ($isRequestingModerator) {
 	if (!has_valid_csrf_token()) {
 		$error = 'Your session expired. Please try again.';
 		$status = 400;
+	} elseif (!preg_match('/^[A-Za-z0-9_]{3,30}$/D', $profile['username'])) {
+		$error = 'Choose a username of 3 to 30 letters, numbers, or underscores.';
+		$status = 400;
 	} elseif (strlen($profile['display_name']) > 240
 		|| strlen($profile['bio']) > 2000
 		|| strlen($profile['favorite_team']) > 400
@@ -86,22 +90,40 @@ if ($isRequestingModerator) {
 		$error = 'One or more profile fields exceed the allowed length.';
 		$status = 400;
 	} else {
-		$uploadedImage = store_profile_image($error, $status);
-		if ($error === '') {
-			try {
-				$database = database_connection();
+		$uploadedImage = null;
+		try {
+			$database = database_connection();
+			$usernameQuery = $database->prepare(
+				'SELECT username FROM users WHERE username = :username AND user_id <> :user_id
+				UNION ALL
+				SELECT username FROM pending_registrations WHERE username = :pending_username
+				LIMIT 1'
+			);
+			$usernameQuery->execute([
+				'username' => $profile['username'],
+				'user_id' => $userId,
+				'pending_username' => $profile['username'],
+			]);
+			if ($usernameQuery->fetchColumn() !== false) {
+				$error = 'That username is already taken. Choose another one.';
+				$status = 409;
+			} else {
+				$uploadedImage = store_profile_image($error, $status);
+			}
+			if ($error === '') {
 				$oldImageQuery = $database->prepare(
 					'SELECT profile_image_path FROM users WHERE user_id = :user_id'
 				);
 				$oldImageQuery->execute(['user_id' => $userId]);
 				$oldImagePath = $oldImageQuery->fetchColumn();
 				$query = $database->prepare(
-					'UPDATE users SET display_name = :display_name, bio = :bio,
+					'UPDATE users SET username = :username, display_name = :display_name, bio = :bio,
 						favorite_team = :favorite_team, location = :location,
 						profile_image_path = COALESCE(:profile_image_path, profile_image_path)
 					WHERE user_id = :user_id'
 				);
 				$query->execute([
+					'username' => $profile['username'],
 					'display_name' => $profile['display_name'] !== '' ? $profile['display_name'] : null,
 					'bio' => $profile['bio'] !== '' ? $profile['bio'] : null,
 					'favorite_team' => $profile['favorite_team'] !== '' ? $profile['favorite_team'] : null,
@@ -119,15 +141,22 @@ if ($isRequestingModerator) {
 					}
 				}
 
+				$_SESSION['username'] = $profile['username'];
 				$_SESSION['profile_notice'] = 'Your profile has been updated.';
 				header('Location: profile.php');
 				exit;
-			} catch (PDOException $exception) {
-				if ($uploadedImage !== null && is_file($uploadedImage['absolute_path'])) {
-					if (!unlink($uploadedImage['absolute_path'])) {
-						error_log('WoSo profile image cleanup error: the unsaved image could not be removed.');
-					}
+			}
+		} catch (PDOException $exception) {
+			if ($uploadedImage !== null && is_file($uploadedImage['absolute_path'])) {
+				if (!unlink($uploadedImage['absolute_path'])) {
+					error_log('WoSo profile image cleanup error: the unsaved image could not be removed.');
 				}
+			}
+			if ((string) $exception->getCode() === '23000'
+				&& isset($exception->errorInfo[1]) && (int) $exception->errorInfo[1] === 1062) {
+				$error = 'That username is already taken. Choose another one.';
+				$status = 409;
+			} else {
 				error_log('WoSo profile update database error: ' . $exception->getMessage());
 				$error = 'Your profile could not be saved. Please check the database setup and try again.';
 				$status = 503;
@@ -146,11 +175,11 @@ if (!$isEditing || $error !== '' || $_SERVER['REQUEST_METHOD'] !== 'POST') {
 		$query->execute(['user_id' => $userId]);
 		$savedProfile = $query->fetch();
 		if ($savedProfile) {
-			$profile['username'] = (string) $savedProfile['username'];
 			$profile['email'] = (string) $savedProfile['email'];
 			$profile['role'] = (string) $savedProfile['role'];
 			$profile['profile_image_path'] = $savedProfile['profile_image_path'];
 			if (!$isEditing || $_SERVER['REQUEST_METHOD'] !== 'POST') {
+				$profile['username'] = (string) $savedProfile['username'];
 				$profile['display_name'] = (string) ($savedProfile['display_name'] ?? '');
 				$profile['bio'] = (string) ($savedProfile['bio'] ?? '');
 				$profile['favorite_team'] = (string) ($savedProfile['favorite_team'] ?? '');
@@ -193,7 +222,6 @@ http_response_code($status);
 		<a href="home.php">Home</a>
 		<a href="matches.php">Match Center</a>
 		<?= community_nav_link() ?>
-		<a href="polls.php">Polls</a>
 		<a href="predictions.php">Predictions</a>
 		<?= notifications_nav_link() ?>
 		<?= moderation_nav_link() ?>
@@ -221,6 +249,9 @@ http_response_code($status);
 				<p class="profile-username">@<?= escape_html((string) $profile['username']) ?></p>
 				<form action="profile.php?edit=1" method="post" enctype="multipart/form-data">
 					<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
+					<label for="username">Username</label>
+					<input id="username" name="username" type="text" autocomplete="username" minlength="3" maxlength="30" pattern="[A-Za-z0-9_]+" value="<?= escape_html((string) $profile['username']) ?>" required>
+					<p class="post-hint">Use 3–30 letters, numbers, or underscores. Usernames must be unique.</p>
 					<label for="display-name">Display name</label>
 					<input id="display-name" name="display_name" type="text" maxlength="60" value="<?= escape_html((string) $profile['display_name']) ?>" placeholder="How should we call you?">
 					<label for="bio">About you</label>
@@ -260,7 +291,7 @@ http_response_code($status);
 					</dl>
 					<div class="profile-account-actions">
 						<a class="auth-button" href="profile.php?edit=1">Edit profile</a>
-						<a class="profile-secondary-button" href="request_password_reset.php">Change password by email</a>
+						<a class="auth-button" href="request_password_reset.php">Change Password</a>
 						<a class="auth-button" href="home.php?user_id=<?= $userId ?>">View public profile</a>
 						<form action="logout.php" method="post">
 							<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">

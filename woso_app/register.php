@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	} elseif (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 254) {
 		$error = 'Enter a valid email address.';
 	} elseif (strlen($password) < 8 || strlen($password) > 4096) {
-		$error = 'Your password must be at least 8 characters long.';
+		$error = 'Your password must be at least 8 characters long and no more than 4096 bytes.';
 	} elseif ($password !== $confirmPassword) {
 		$error = 'The passwords do not match.';
 	} else {
@@ -154,9 +154,10 @@ http_response_code($status);
 			<label for="email">Email address</label>
 			<input id="email" name="email" type="email" autocomplete="email" maxlength="254" value="<?= escape_html($email) ?>" required>
 			<label for="password">Password</label>
-			<input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required>
+			<input id="password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="4096" aria-describedby="password-guidance" required>
+			<p id="password-guidance" class="auth-intro">Use at least 8 characters (maximum 4096 bytes). Letters, numbers, spaces, and symbols are allowed; no specific character mix is required.</p>
 			<label for="confirm-password">Confirm password</label>
-			<input id="confirm-password" name="confirm_password" type="password" autocomplete="new-password" minlength="8" required>
+			<input id="confirm-password" name="confirm_password" type="password" autocomplete="new-password" minlength="8" maxlength="4096" aria-describedby="password-guidance" required>
 			<button class="auth-button" type="submit">Send confirmation email</button>
 		</form>
 		<p class="auth-register-link">Already have an account? <a href="login.php">Sign in</a></p>

@@ -4725,3 +4725,17 @@ video.community-message-media
 {
 	flex: 0 0 1px;
 }
+
+.auth-button.google-button
+{
+	border: 1px solid #8ca992;
+	background-color: #fff;
+	color: #1d3823;
+}
+
+.auth-button.google-button:hover,
+.auth-button.google-button:focus-visible
+{
+	background-color: #e3f0e5;
+	color: #1d3823;
+}

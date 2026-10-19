@@ -46,7 +46,7 @@ if (!$isTokenFormatValid) {
 		} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
 			$password = post_string('password');
 			if (strlen($password) < 8 || strlen($password) > 4096) {
-				$error = 'Your password must be between 8 and 4096 characters long.';
+				$error = 'Your password must be at least 8 characters long and no more than 4096 bytes.';
 				$status = 400;
 			} elseif ($password !== post_string('confirm_password')) {
 				$error = 'The passwords do not match.';
@@ -127,9 +127,10 @@ http_response_code($status);
 				<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
 				<input type="hidden" name="token" value="<?= escape_html($token) ?>">
 				<label for="password">New password</label>
-				<input id="password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="4096" required>
+				<input id="password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="4096" aria-describedby="password-guidance" required>
+				<p id="password-guidance" class="auth-intro">Use at least 8 characters (maximum 4096 bytes). Letters, numbers, spaces, and symbols are allowed; no specific character mix is required.</p>
 				<label for="confirm-password">Confirm new password</label>
-				<input id="confirm-password" name="confirm_password" type="password" autocomplete="new-password" minlength="8" maxlength="4096" required>
+				<input id="confirm-password" name="confirm_password" type="password" autocomplete="new-password" minlength="8" maxlength="4096" aria-describedby="password-guidance" required>
 				<button class="auth-button" type="submit">Change password</button>
 			</form>
 		<?php endif; ?>

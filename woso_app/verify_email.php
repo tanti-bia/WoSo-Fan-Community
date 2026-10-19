@@ -77,7 +77,7 @@ if (!$isTokenFormatValid) {
 				$database->commit();
 
 				sign_in_user($user);
-				$allowedTargets = ['polls.php', 'predictions.php', 'community.php', 'profile.php', 'notifications.php', 'moderation.php'];
+			$allowedTargets = ['predictions.php', 'community.php', 'profile.php', 'notifications.php', 'moderation.php'];
 				$redirectTarget = (string) $pending['redirect_target'];
 				if (!in_array($redirectTarget, $allowedTargets, true)) {
 					$redirectTarget = 'home.php';
