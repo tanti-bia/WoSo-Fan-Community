@@ -19,11 +19,14 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !has_valid_csrf_token()) {
 $reason = trim(post_string('reason'));
 $type = post_string('target_type');
 $reporterId = (int) $_SESSION['user_id'];
-$targetId = filter_var(post_string('target_id'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 $returnTo = post_string('return_to');
 if (!preg_match('/^home\.php(?:\?[^#\r\n]*)?(?:#[A-Za-z0-9_-]+)?$/', $returnTo)) {
 	$returnTo = 'home.php';
 }
+if (can_access_moderation()) {
+	report_redirect($returnTo, 'Administrators use the moderation controls instead of submitting reports.', true);
+}
+$targetId = filter_var(post_string('target_id'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 if (!in_array($type, ['post', 'user'], true) || $targetId === false
 	|| $reason === '' || strlen($reason) > 8000) {
 	report_redirect($returnTo, 'A report needs a target and a reason of 1 to 2,000 characters.', true);

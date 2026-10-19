@@ -9,11 +9,8 @@ require_signed_in('profile.php');
 $error = '';
 $status = 200;
 $userId = (int) $_SESSION['user_id'];
-$isRequestingModerator = $_SERVER['REQUEST_METHOD'] === 'POST'
-	&& post_string('action') === 'request_moderator';
-$isEditing = ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isRequestingModerator)
+$isEditing = $_SERVER['REQUEST_METHOD'] === 'POST'
 	|| (isset($_GET['edit']) && is_string($_GET['edit']) && $_GET['edit'] === '1');
-$moderatorRequestPending = false;
 $profile = [
 	'username' => (string) $_SESSION['username'],
 	'email' => (string) ($_SESSION['email'] ?? ''),
@@ -25,52 +22,7 @@ $profile = [
 	'profile_image_path' => null,
 ];
 
-if ($isRequestingModerator) {
-	if (!has_valid_csrf_token()) {
-		$error = 'Your session expired. Please try again.';
-		$status = 400;
-	} else {
-		try {
-			$database = database_connection();
-			$database->beginTransaction();
-			$roleQuery = $database->prepare(
-				'SELECT role FROM users WHERE user_id = :user_id FOR UPDATE'
-			);
-			$roleQuery->execute(['user_id' => $userId]);
-			$currentRole = $roleQuery->fetchColumn();
-			if ($currentRole !== 'Member') {
-				$database->rollBack();
-				$error = 'Only Members can request Moderator access.';
-				$status = 403;
-			} else {
-				$requestQuery = $database->prepare(
-					'SELECT user_id FROM moderator_requests WHERE user_id = :user_id'
-				);
-				$requestQuery->execute(['user_id' => $userId]);
-				if ($requestQuery->fetchColumn() !== false) {
-					$database->rollBack();
-					$_SESSION['profile_notice'] = 'Your Moderator access request is already pending.';
-				} else {
-					$request = $database->prepare(
-						'INSERT INTO moderator_requests (user_id) VALUES (:user_id)'
-					);
-					$request->execute(['user_id' => $userId]);
-					$database->commit();
-					$_SESSION['profile_notice'] = 'Your Moderator access request has been submitted for administrator approval.';
-				}
-				header('Location: profile.php');
-				exit;
-			}
-		} catch (PDOException $exception) {
-			if (isset($database) && $database->inTransaction()) {
-				$database->rollBack();
-			}
-			error_log('WoSo moderator request database error: ' . $exception->getMessage());
-			$error = 'Your Moderator access request could not be submitted. Please try again later.';
-			$status = 503;
-		}
-	}
-} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	$profile['username'] = trim(post_string('username'));
 	$profile['display_name'] = trim(post_string('display_name'));
 	$profile['bio'] = trim(post_string('bio'));
@@ -186,13 +138,6 @@ if (!$isEditing || $error !== '' || $_SERVER['REQUEST_METHOD'] !== 'POST') {
 				$profile['location'] = (string) ($savedProfile['location'] ?? '');
 			}
 		}
-		if ($profile['role'] === 'Member') {
-			$requestQuery = $database->prepare(
-				'SELECT user_id FROM moderator_requests WHERE user_id = :user_id'
-			);
-			$requestQuery->execute(['user_id' => $userId]);
-			$moderatorRequestPending = $requestQuery->fetchColumn() !== false;
-		}
 	} catch (PDOException $exception) {
 		error_log('WoSo profile load database error: ' . $exception->getMessage());
 		$error = 'Your profile is temporarily unavailable. Please check the database setup and try again.';
@@ -300,21 +245,6 @@ http_response_code($status);
 							<button class="profile-logout-button" type="submit">Log out</button>
 						</form>
 					</div>
-					<?php if ($profile['role'] === 'Member'): ?>
-						<section class="moderator-request" aria-labelledby="moderator-request-heading">
-							<h3 id="moderator-request-heading">Moderator access</h3>
-							<?php if ($moderatorRequestPending): ?>
-								<p>Your request is pending administrator approval.</p>
-							<?php else: ?>
-								<p>Request Moderator access. An administrator must approve your request.</p>
-								<form action="profile.php" method="post">
-									<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
-									<input type="hidden" name="action" value="request_moderator">
-									<button class="profile-secondary-button" type="submit">Request Moderator access</button>
-								</form>
-							<?php endif; ?>
-						</section>
-					<?php endif; ?>
 				</div>
 			<?php endif; ?>
 		</section>

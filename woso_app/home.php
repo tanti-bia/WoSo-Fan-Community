@@ -12,6 +12,7 @@ const MAX_POST_MEDIA_SIZE = 25 * 1024 * 1024;
 $error = '';
 $status = 200;
 $isSignedIn = isset($_SESSION['user_id']);
+$isAdministrator = can_access_moderation();
 $posts = [];
 $interactionStats = [];
 $likedPostIds = [];
@@ -388,7 +389,7 @@ try {
 
 	if ($profileViewRequested && $profileUserId !== null) {
 		$profileQuery = $database->prepare(
-			'SELECT user_id, username, display_name, bio, favorite_team, location, profile_image_path
+			'SELECT user_id, username, email, role, display_name, bio, favorite_team, location, profile_image_path
 			FROM users WHERE user_id = :user_id'
 		);
 		$profileQuery->execute(['user_id' => $profileUserId]);
@@ -672,15 +673,35 @@ http_response_code($status);
 										</div>
 									</div>
 					<?php if ($isSignedIn && $profileUserId !== (int) $_SESSION['user_id']): ?>
-						<form class="report-form report-profile-form" action="report_action.php" method="post">
-							<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
-							<input type="hidden" name="target_type" value="user">
-							<input type="hidden" name="target_id" value="<?= (int) $profileUserId ?>">
-							<input type="hidden" name="return_to" value="<?= escape_html('home.php?user_id=' . $profileUserId) ?>">
-							<label for="report-profile-reason">Report this user</label>
-							<textarea id="report-profile-reason" name="reason" required maxlength="2000" placeholder="Explain why you are reporting this account"></textarea>
-							<button class="post-action" type="submit">Send report</button>
-						</form>
+						<?php if ($isAdministrator): ?>
+							<form class="moderation-action-form user-review-form admin-inline-moderation" action="admin_moderation_action.php" method="post">
+								<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
+								<input type="hidden" name="target_type" value="user">
+								<input type="hidden" name="target_id" value="<?= (int) $profileUserId ?>">
+								<input type="hidden" name="return_to" value="<?= escape_html('home.php?user_id=' . $profileUserId) ?>">
+								<label for="user-action-profile-<?= (int) $profileUserId ?>">Manage user</label>
+								<select id="user-action-profile-<?= (int) $profileUserId ?>" name="review_action">
+									<option value="none">Do nothing</option><option value="temporary_block">Block user temporarily</option><option value="ban_user">Ban user</option>
+								</select>
+								<div class="moderation-block-period" hidden>
+									<label for="days-profile-<?= (int) $profileUserId ?>">Block length</label>
+									<select id="days-profile-<?= (int) $profileUserId ?>" name="block_days" disabled>
+										<option value="1">1 day</option><option value="7">7 days</option><option value="30">30 days</option><option value="90">90 days</option><option value="365">365 days</option>
+									</select>
+								</div>
+								<button class="auth-button" type="submit">Save user decision</button>
+							</form>
+						<?php else: ?>
+							<form class="report-form report-profile-form" action="report_action.php" method="post">
+								<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
+								<input type="hidden" name="target_type" value="user">
+								<input type="hidden" name="target_id" value="<?= (int) $profileUserId ?>">
+								<input type="hidden" name="return_to" value="<?= escape_html('home.php?user_id=' . $profileUserId) ?>">
+								<label for="report-profile-reason">Report this user</label>
+								<textarea id="report-profile-reason" name="reason" required maxlength="2000" placeholder="Explain why you are reporting this account"></textarea>
+								<button class="post-action" type="submit">Send report</button>
+							</form>
+						<?php endif; ?>
 					<?php endif; ?>
 					<nav class="profile-activity-menu" aria-label="View profile activity">
 						<a class="<?= $profileActivity === 'posts' ? 'active' : '' ?>"<?= $profileActivity === 'posts' ? ' aria-current="page"' : '' ?> href="home.php?user_id=<?= (int) $profileUser['user_id'] ?>&amp;activity=posts">Posts</a>
@@ -859,20 +880,34 @@ http_response_code($status);
 								</div>
 								<time datetime="<?= escape_html((string) $post['feed_created_at']) ?>"><?= escape_html(date('M j, Y \a\t g:i a', strtotime((string) $post['feed_created_at']))) ?></time>
 							</header>
-							<?php if ($isSignedIn && (int) $post['user_id'] !== (int) $_SESSION['user_id']): ?>
-								<details class="report-details">
-									<summary>Report post</summary>
-									<form class="report-form" action="report_action.php" method="post">
-										<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
-										<input type="hidden" name="target_type" value="post">
-										<input type="hidden" name="target_id" value="<?= $postId ?>">
-										<input type="hidden" name="return_to" value="<?= escape_html($postViewRequested ? 'home.php?post_id=' . $postId : 'home.php' . $profileRedirect) ?>">
-										<label for="report-post-reason-<?= $postId ?>">Why are you reporting this post?</label>
-										<textarea id="report-post-reason-<?= $postId ?>" name="reason" required maxlength="2000" placeholder="Describe the issue"></textarea>
-										<button class="post-action" type="submit">Send report</button>
-									</form>
-								</details>
-							<?php endif; ?>
+			<?php if ($isSignedIn && (int) $post['user_id'] !== (int) $_SESSION['user_id']): ?>
+				<?php if ($isAdministrator): ?>
+					<form class="moderation-action-form post-review-form admin-inline-moderation" action="admin_moderation_action.php" method="post">
+						<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
+						<input type="hidden" name="target_type" value="post">
+						<input type="hidden" name="target_id" value="<?= $postId ?>">
+						<input type="hidden" name="return_to" value="<?= escape_html($postViewRequested ? 'home.php?post_id=' . $postId : 'home.php' . $profileRedirect) ?>">
+						<label for="post-action-inline-<?= $postId ?>">Manage post</label>
+						<select id="post-action-inline-<?= $postId ?>" name="review_action">
+							<option value="none">Do nothing</option><option value="delete_post">Delete post</option>
+						</select>
+						<button class="auth-button" type="submit">Save post decision</button>
+					</form>
+				<?php else: ?>
+					<details class="report-details">
+						<summary>Report post</summary>
+						<form class="report-form" action="report_action.php" method="post">
+							<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
+							<input type="hidden" name="target_type" value="post">
+							<input type="hidden" name="target_id" value="<?= $postId ?>">
+							<input type="hidden" name="return_to" value="<?= escape_html($postViewRequested ? 'home.php?post_id=' . $postId : 'home.php' . $profileRedirect) ?>">
+							<label for="report-post-reason-<?= $postId ?>">Why are you reporting this post?</label>
+							<textarea id="report-post-reason-<?= $postId ?>" name="reason" required maxlength="2000" placeholder="Describe the issue"></textarea>
+							<button class="post-action" type="submit">Send report</button>
+						</form>
+					</details>
+				<?php endif; ?>
+			<?php endif; ?>
 							<div class="post-open-content">
 								<?php if (is_string($post['content']) && $post['content'] !== ''): ?>
 									<p class="post-content"><?= nl2br(escape_html((string) $post['content'])) ?></p>
@@ -947,6 +982,27 @@ http_response_code($status);
 		</section>
 	</main>
 	<script>
+		document.querySelectorAll('.moderation-action-form').forEach((form) => {
+			const action = form.querySelector('[name="review_action"]');
+			const period = form.querySelector('.moderation-block-period');
+			const days = form.querySelector('[name="block_days"]');
+			if (period && days) {
+				const updatePeriodVisibility = () => {
+					const shouldShow = action.value === 'temporary_block';
+					period.hidden = !shouldShow;
+					days.disabled = !shouldShow;
+					days.required = shouldShow;
+				};
+				action.addEventListener('change', updatePeriodVisibility);
+				updatePeriodVisibility();
+			}
+		});
+		document.querySelectorAll('.post-review-form').forEach((form) => {
+			form.addEventListener('submit', (event) => {
+				if (form.querySelector('[name="review_action"]').value === 'delete_post'
+					&& !confirm('Delete this post and notify its author?')) event.preventDefault();
+			});
+		});
 		document.querySelectorAll('.post-card.is-openable, .profile-comment-card.is-openable, .comment-card.is-openable').forEach((openableCard) => {
 			const openCard = () => {
 				window.location.href = openableCard.dataset.postUrl;

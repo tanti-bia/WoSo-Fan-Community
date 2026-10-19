@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS users
 	profile_image_path VARCHAR(255) NULL,
 	banned_at DATETIME NULL,
 	suspended_until DATETIME NULL,
-	role ENUM('Visitor', 'Member', 'Moderator', 'Administrator') NOT NULL DEFAULT 'Member',
+	role ENUM('Visitor', 'Member', 'Administrator') NOT NULL DEFAULT 'Member',
 	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	PRIMARY KEY (user_id),
 	UNIQUE KEY users_username_unique (username),
@@ -178,18 +178,6 @@ CREATE TABLE IF NOT EXISTS community_notifications
 	CONSTRAINT community_notifications_actor_fk FOREIGN KEY (actor_user_id) REFERENCES users (user_id) ON DELETE CASCADE,
 	CONSTRAINT community_notifications_chat_fk FOREIGN KEY (chat_id) REFERENCES chats (chat_id) ON DELETE CASCADE,
 	CONSTRAINT community_notifications_message_fk FOREIGN KEY (message_id) REFERENCES chat_messages (message_id) ON DELETE CASCADE
-) ENGINE=InnoDB
-	DEFAULT CHARACTER SET utf8mb4
-	COLLATE utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS moderator_requests
-(
-	user_id INT UNSIGNED NOT NULL,
-	requested_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	PRIMARY KEY (user_id),
-	CONSTRAINT moderator_requests_user_fk
-		FOREIGN KEY (user_id) REFERENCES users (user_id)
-		ON DELETE CASCADE
 ) ENGINE=InnoDB
 	DEFAULT CHARACTER SET utf8mb4
 	COLLATE utf8mb4_unicode_ci;

@@ -734,37 +734,6 @@ button
   margin: 0;
 }
 
-.moderator-request
-{
-  margin-top: 24px;
-  padding: 16px;
-  border: 1px solid #d5e2d7;
-  border-radius: 8px;
-  background-color: #fff;
-}
-
-.moderator-request h3
-{
-  margin: 0 0 8px;
-  color: #285536;
-}
-
-.moderator-request p
-{
-  margin: 0 0 12px;
-  color: #425a47;
-}
-
-.moderator-request form
-{
-  display: block;
-}
-
-.moderator-request .profile-secondary-button
-{
-  width: auto;
-}
-
 .profile-avatar
 {
   display: block;
@@ -3041,6 +3010,22 @@ body > p
 .moderation-block-period[hidden]
 {
 	display: none;
+}
+
+.admin-inline-moderation
+{
+	max-width: 380px;
+	margin: 8px 0 14px;
+	padding: 12px;
+	border: 1px solid var(--line);
+	border-radius: 12px;
+	background: var(--surface);
+}
+
+.admin-inline-moderation .moderation-block-period
+{
+	grid-column: auto;
+	grid-row: auto;
 }
 
 .report-form textarea

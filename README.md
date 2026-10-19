@@ -41,8 +41,6 @@ Visitor: Browse public discussions
 
 Member: Publish posts, comment, and submit predictions
 
-Moderator: Remove inappropriate content and review reports
-
 Administrator: Manage accounts, permissions, and platform settings
 
 3. Required technologies
@@ -347,10 +345,9 @@ port 3306, database `woso_community`, user `root`, and an empty password. Config
 `WOSO_DB_PASSWORD` in the PHP server environment to use different connection
 settings. Do not use the local defaults in a production deployment.
 
-Registration creates every account with the Member role. Signed-in Members can
-request Moderator access from their profile; requests are recorded in the
-`moderator_requests` table and elevated roles must be granted by an administrator.
-The Moderation link is shown only to signed-in moderators and administrators, and
-the moderation route checks the role even when opened directly. Passwords are
-stored using PHP's password hashing API. The existing content pages remain publicly
-viewable, consistent with the Visitor role described above.
+Registration creates every account with the Member role. Administrators manage
+accounts and handle reports through the moderation tools. The Moderation link is
+shown only to signed-in administrators, and the moderation route checks the role
+even when opened directly. Passwords are stored using PHP's password hashing API.
+The existing content pages remain publicly viewable, consistent with the Visitor
+role described above.
