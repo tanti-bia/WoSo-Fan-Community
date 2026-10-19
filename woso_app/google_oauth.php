@@ -78,6 +78,64 @@ function google_oauth_decode_base64url(string $value): string
 	return $decoded;
 }
 
+function google_oauth_der_length(int $length): string
+{
+	if ($length < 0x80) {
+		return chr($length);
+	}
+
+	$encodedLength = '';
+	while ($length > 0) {
+		$encodedLength = chr($length & 0xff) . $encodedLength;
+		$length >>= 8;
+	}
+
+	return chr(0x80 | strlen($encodedLength)) . $encodedLength;
+}
+
+function google_oauth_der_value(int $tag, string $value): string
+{
+	return chr($tag) . google_oauth_der_length(strlen($value)) . $value;
+}
+
+function google_oauth_rsa_jwk_to_pem(array $key): ?string
+{
+	if (!is_string($key['n'] ?? null) || !is_string($key['e'] ?? null)) {
+		return null;
+	}
+
+	$modulus = google_oauth_decode_base64url($key['n']);
+	$exponent = google_oauth_decode_base64url($key['e']);
+	if ($modulus === '' || $exponent === '') {
+		return null;
+	}
+
+	if ((ord($modulus[0]) & 0x80) !== 0) {
+		$modulus = "\0" . $modulus;
+	}
+	if ((ord($exponent[0]) & 0x80) !== 0) {
+		$exponent = "\0" . $exponent;
+	}
+
+	$rsaPublicKey = google_oauth_der_value(0x30,
+		google_oauth_der_value(0x02, $modulus)
+		. google_oauth_der_value(0x02, $exponent)
+	);
+	$rsaEncryptionAlgorithm = hex2bin('300d06092a864886f70d0101010500');
+	if (!is_string($rsaEncryptionAlgorithm)) {
+		return null;
+	}
+
+	$subjectPublicKeyInfo = google_oauth_der_value(0x30,
+		$rsaEncryptionAlgorithm
+		. google_oauth_der_value(0x03, "\0" . $rsaPublicKey)
+	);
+
+	return "-----BEGIN PUBLIC KEY-----\n"
+		. chunk_split(base64_encode($subjectPublicKeyInfo), 64, "\n")
+		. "-----END PUBLIC KEY-----\n";
+}
+
 function google_oauth_verify_id_token(string $idToken, string $clientId, string $expectedNonce): array
 {
 	if (!function_exists('openssl_verify')) {
@@ -99,20 +157,24 @@ function google_oauth_verify_id_token(string $idToken, string $clientId, string 
 	}
 
 	$keys = google_oauth_http_json('https://www.googleapis.com/oauth2/v3/certs');
-	$certificate = null;
+	$publicKey = null;
 	foreach ($keys['keys'] ?? [] as $key) {
 		if (is_array($key) && ($key['kid'] ?? '') === $header['kid']
 			&& ($key['kty'] ?? '') === 'RSA'
-			&& isset($key['x5c'][0]) && is_string($key['x5c'][0])) {
-			$certificate = "-----BEGIN CERTIFICATE-----\n"
-				. chunk_split($key['x5c'][0], 64, "\n")
-				. "-----END CERTIFICATE-----\n";
+			&& ($key['alg'] ?? '') === 'RS256') {
+			if (isset($key['x5c'][0]) && is_string($key['x5c'][0])) {
+				$publicKey = "-----BEGIN CERTIFICATE-----\n"
+					. chunk_split($key['x5c'][0], 64, "\n")
+					. "-----END CERTIFICATE-----\n";
+			} else {
+				$publicKey = google_oauth_rsa_jwk_to_pem($key);
+			}
 			break;
 		}
 	}
 
-	if ($certificate === null
-		|| openssl_verify($segments[0] . '.' . $segments[1], $signature, $certificate, OPENSSL_ALGO_SHA256) !== 1) {
+	if ($publicKey === null
+		|| openssl_verify($segments[0] . '.' . $segments[1], $signature, $publicKey, OPENSSL_ALGO_SHA256) !== 1) {
 		throw new RuntimeException('Google ID token signature verification failed.');
 	}
 
