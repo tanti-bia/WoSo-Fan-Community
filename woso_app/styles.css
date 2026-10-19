@@ -3957,15 +3957,15 @@ body > p
 .community-chat-thread
 {
 	position: relative;
-	border: 4px solid #000;
-	background: #add8e6;
-	box-shadow: 0 0 0 2px #000, 0 18px 42px rgb(5 24 13 / 35%);
+	border: 3px solid var(--green-900);
+	background: var(--surface-muted);
+	box-shadow: 0 0 0 1px var(--green-900), 0 18px 42px rgb(5 24 13 / 28%);
 }
 
 .community-thread-heading
 {
-	background: #ff1493;
-	color: #18000d;
+	background: var(--green-800);
+	color: var(--surface);
 }
 
 .community-thread-type,
@@ -3975,20 +3975,20 @@ body > p
 .community-thread-heading .community-participant-identity .post-author-display-name,
 .community-thread-heading .community-participant-identity .profile-link
 {
-	color: #18000d;
+	color: var(--surface);
 }
 
 .community-message-list
 {
-	background: #add8e6;
+	background: var(--surface-muted);
 }
 
 .community-message
 {
 	justify-self: start;
 	margin-right: auto;
-	border: 2px solid #000;
-	background: #fff;
+	border: 2px solid var(--green-300);
+	background: var(--surface);
 }
 
 .community-message.is-own-message
@@ -3996,6 +3996,62 @@ body > p
 	justify-self: end;
 	margin-right: 0;
 	margin-left: auto;
-	border: 2px solid #000;
-	background: #d8f0f8;
+	border: 2px solid var(--green-600);
+	background: #d5e6d8;
+}
+
+.community-thread-content[hidden],
+.community-thread-minimized[hidden]
+{
+	display: none !important;
+}
+
+.community-thread-content
+{
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-height: 0;
+}
+
+.community-chat-thread.is-minimized
+{
+	height: auto;
+	min-height: 0;
+	align-self: start;
+	background: var(--surface);
+}
+
+.community-thread-minimized
+{
+	display: flex;
+	min-height: 190px;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	padding: 24px;
+	text-align: center;
+}
+
+.community-thread-minimized h2,
+.community-thread-minimized p
+{
+	margin: 0;
+}
+
+.community-thread-minimized h2
+{
+	color: var(--green-900);
+}
+
+.community-thread-minimized p
+{
+	max-width: 34ch;
+	color: var(--muted);
+}
+
+.community-thread-minimized .community-empty-mark
+{
+	color: var(--green-700);
 }

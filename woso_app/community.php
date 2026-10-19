@@ -319,7 +319,7 @@ http_response_code($status);
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>Women's Football - Community</title>
-	<link rel="stylesheet" href="styles.css">
+	<link rel="stylesheet" href="styles.css?v=<?= (string) filemtime(__DIR__ . '/styles.css') ?>">
 	<script src="back_button.js" defer></script>
 	<script src="community_chat.js" defer></script>
 </head>
@@ -453,6 +453,7 @@ http_response_code($status);
 						? (string) $activeConversation['title']
 						: (string) (($directParticipant['display_name'] ?? '') ?: ($directParticipant['username'] ?? 'Direct chat'));
 					?>
+					<div id="community-chat-content" class="community-thread-content" data-chat-content>
 					<header class="community-thread-heading">
 						<?php if ($activeIsGroup): ?>
 							<p class="community-thread-type">Group conversation</p>
@@ -520,6 +521,13 @@ http_response_code($status);
 							<button class="auth-button" type="submit">Send message <span aria-hidden="true">&#10148;</span></button>
 						</div>
 					</form>
+					</div>
+					<div class="community-thread-minimized" data-chat-minimized hidden>
+						<span class="community-empty-mark" aria-hidden="true">&#10022;</span>
+						<h2>Conversation minimized</h2>
+						<p>Your messages are still here. Reopen this conversation whenever you’re ready.</p>
+						<button class="auth-button" type="button" data-chat-reopen>Reopen conversation</button>
+					</div>
 				<?php endif; ?>
 			</section>
 		</div>

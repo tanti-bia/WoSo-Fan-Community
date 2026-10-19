@@ -4,6 +4,29 @@ document.addEventListener('DOMContentLoaded', () => {
 		messageList.scrollTop = messageList.scrollHeight;
 	}
 
+	const activeChatLink = document.querySelector('.community-chat-link.is-active');
+	const chatThread = document.querySelector('.community-chat-thread');
+	const chatContent = chatThread?.querySelector('[data-chat-content]');
+	const minimizedChat = chatThread?.querySelector('[data-chat-minimized]');
+	const reopenChatButton = chatThread?.querySelector('[data-chat-reopen]');
+
+	if (activeChatLink && chatThread && chatContent && minimizedChat) {
+		const setMinimized = (minimized) => {
+			chatThread.classList.toggle('is-minimized', minimized);
+			chatContent.hidden = minimized;
+			minimizedChat.hidden = !minimized;
+			activeChatLink.setAttribute('aria-expanded', String(!minimized));
+		};
+
+		activeChatLink.setAttribute('aria-controls', 'community-chat-content');
+		activeChatLink.setAttribute('aria-expanded', 'true');
+		activeChatLink.addEventListener('click', (event) => {
+			event.preventDefault();
+			setMinimized(!chatThread.classList.contains('is-minimized'));
+		});
+		reopenChatButton?.addEventListener('click', () => setMinimized(false));
+	}
+
 	const messageInput = document.getElementById('message-body');
 	if (!messageInput) {
 		return;
