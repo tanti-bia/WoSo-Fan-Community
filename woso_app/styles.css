@@ -4581,6 +4581,13 @@ video.community-message-media
 	cursor: pointer;
 }
 
+.post-composer-actions .composer-attachment-button
+{
+	display: grid;
+	margin: 0;
+	font-weight: normal;
+}
+
 .composer-send-button:hover,
 .composer-send-button:focus-visible,
 .composer-attachment-button:hover,
