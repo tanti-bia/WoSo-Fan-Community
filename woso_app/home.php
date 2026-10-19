@@ -674,7 +674,7 @@ http_response_code($status);
 									</div>
 					<?php if ($isSignedIn && $profileUserId !== (int) $_SESSION['user_id']): ?>
 						<?php if ($isAdministrator): ?>
-							<details class="admin-inline-moderation">
+							<details class="inline-moderation-control">
 								<summary>Manage user</summary>
 								<form class="moderation-action-form user-review-form" action="admin_moderation_action.php" method="post">
 									<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
@@ -695,15 +695,18 @@ http_response_code($status);
 								</form>
 							</details>
 						<?php else: ?>
-							<form class="report-form report-profile-form" action="report_action.php" method="post">
-								<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
-								<input type="hidden" name="target_type" value="user">
-								<input type="hidden" name="target_id" value="<?= (int) $profileUserId ?>">
-								<input type="hidden" name="return_to" value="<?= escape_html('home.php?user_id=' . $profileUserId) ?>">
-								<label for="report-profile-reason">Report this user</label>
-								<textarea id="report-profile-reason" name="reason" required maxlength="2000" placeholder="Explain why you are reporting this account"></textarea>
-								<button class="post-action" type="submit">Send report</button>
-							</form>
+							<details class="inline-moderation-control report-inline-action">
+								<summary>Report user</summary>
+								<form class="report-form report-profile-form" action="report_action.php" method="post">
+									<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
+									<input type="hidden" name="target_type" value="user">
+									<input type="hidden" name="target_id" value="<?= (int) $profileUserId ?>">
+									<input type="hidden" name="return_to" value="<?= escape_html('home.php?user_id=' . $profileUserId) ?>">
+									<label for="report-profile-reason">Reason for report</label>
+									<textarea id="report-profile-reason" name="reason" required maxlength="2000" placeholder="Explain why you are reporting this account"></textarea>
+									<button class="post-action" type="submit">Send report</button>
+								</form>
+							</details>
 						<?php endif; ?>
 					<?php endif; ?>
 					<nav class="profile-activity-menu" aria-label="View profile activity">
@@ -885,7 +888,7 @@ http_response_code($status);
 							</header>
 			<?php if ($isSignedIn && (int) $post['user_id'] !== (int) $_SESSION['user_id']): ?>
 				<?php if ($isAdministrator): ?>
-					<details class="admin-inline-moderation">
+					<details class="inline-moderation-control">
 						<summary>Manage post</summary>
 						<form class="moderation-action-form post-review-form" action="admin_moderation_action.php" method="post">
 							<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
@@ -900,14 +903,14 @@ http_response_code($status);
 						</form>
 					</details>
 				<?php else: ?>
-					<details class="report-details">
+					<details class="inline-moderation-control report-inline-action">
 						<summary>Report post</summary>
 						<form class="report-form" action="report_action.php" method="post">
 							<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
 							<input type="hidden" name="target_type" value="post">
 							<input type="hidden" name="target_id" value="<?= $postId ?>">
 							<input type="hidden" name="return_to" value="<?= escape_html($postViewRequested ? 'home.php?post_id=' . $postId : 'home.php' . $profileRedirect) ?>">
-							<label for="report-post-reason-<?= $postId ?>">Why are you reporting this post?</label>
+							<label for="report-post-reason-<?= $postId ?>">Reason for report</label>
 							<textarea id="report-post-reason-<?= $postId ?>" name="reason" required maxlength="2000" placeholder="Describe the issue"></textarea>
 							<button class="post-action" type="submit">Send report</button>
 						</form>

@@ -3012,7 +3012,7 @@ body > p
 	display: none;
 }
 
-.admin-inline-moderation
+.inline-moderation-control
 {
 	width: fit-content;
 	max-width: 100%;
@@ -3020,7 +3020,7 @@ body > p
 	color: var(--green-900);
 }
 
-.admin-inline-moderation > summary
+.inline-moderation-control > summary
 {
 	display: inline-flex;
 	align-items: center;
@@ -3036,12 +3036,12 @@ body > p
 	list-style: none;
 }
 
-.admin-inline-moderation > summary::-webkit-details-marker
+.inline-moderation-control > summary::-webkit-details-marker
 {
 	display: none;
 }
 
-.admin-inline-moderation[open] > form
+.inline-moderation-control[open] > form
 {
 	width: min(380px, calc(100vw - 64px));
 	max-width: 100%;
@@ -3051,7 +3051,7 @@ body > p
 	background: var(--surface);
 }
 
-.admin-inline-moderation .moderation-block-period
+.inline-moderation-control .moderation-block-period
 {
 	grid-column: auto;
 	grid-row: auto;
