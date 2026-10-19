@@ -12,7 +12,8 @@ TheSportsDB supplies fixtures and results and does not guarantee live score
 updates.
 
 Page: Community
-Functionalities and features: Discussions grouped by team, league, or topic
+Functionalities and features: Signed-in members can start direct chats, create
+groups with selected members, and send messages in their conversations.
 
 Page: Polls
 Functionalities and features: Vote on questions about matches and players
@@ -68,6 +69,9 @@ polls               poll_id (PK), created_by (FK), question, end_date
 poll_options        option_id (PK), poll_id (FK), option_text
 votes               vote_id (PK), poll_id (FK), option_id (FK), user_id (FK)
 predictions         user_id (FK), event_id, home_score, away_score, created_at, updated_at
+chats               chat_id (PK), chat_type, title, direct_key, created_by (FK), created_at
+chat_members        chat_id (FK), user_id (FK), joined_at
+chat_messages       message_id (PK), chat_id (FK), sender_id (FK), body, created_at
 reports             report_id (PK), reporter_id (FK), post_id (FK), reason, status
 
 5. Deploying to Render
@@ -229,6 +233,12 @@ one-time SQL is in `woso_app/predictions_migration.sql`.
 
 PHP pages must be served through a PHP-enabled web server; opening them
 directly as files does not run the account backend.
+The Community page creates the `chats`, `chat_members`, `chat_messages`, and
+`community_notifications` tables automatically. Their definitions are also in
+`woso_app/database.sql`; for an existing database, run the one-time setup script
+`woso_app/community_chat_migration.sql`. Notifications are created when a member
+is added to a group or receives a message, and are marked read when that member
+opens the related conversation.
 Signed-in users can edit their public profile with a display name, bio, favorite
 team, location, and a JPEG, PNG, or WebP profile picture (up to 5 MB). Profile
 pictures are stored in `woso_app/uploads/profiles` or the persistent `uploads`

@@ -631,7 +631,7 @@ http_response_code($status);
 	<nav class="topnav<?= $postViewRequested ? ' post-view-nav' : '' ?>" aria-label="Main navigation">
 		<a class="active" aria-current="page" href="home.php">Home</a>
 		<a href="matches.php">Match Center</a>
-		<a href="community.html">Community</a>
+		<?= community_nav_link() ?>
 		<a href="polls.php">Polls</a>
 		<a href="predictions.php">Predictions</a>
 		<?= notifications_nav_link() ?>

@@ -163,7 +163,7 @@ try {
 </head>
 <body>
 	<nav class="topnav" aria-label="Main navigation">
-		<a href="home.html">Home</a><a href="matches.php">Match Center</a><a href="community.html">Community</a>
+		<a href="home.html">Home</a><a href="matches.php">Match Center</a><?= community_nav_link() ?>
 		<a href="polls.php">Polls</a><a href="predictions.php">Predictions</a><?= notifications_nav_link() ?>
 		<?= moderation_nav_link(true) ?><?= account_nav_link() ?>
 	</nav>

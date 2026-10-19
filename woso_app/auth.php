@@ -55,6 +55,7 @@ function auth_return_target(): string
 	$allowedTargets = [
 		'polls.php',
 		'predictions.php',
+		'community.php',
 		'profile.php',
 		'notifications.php',
 		'moderation.php',
@@ -73,6 +74,7 @@ function require_signed_in(string $target): void
 	$allowedTargets = [
 		'polls.php',
 		'predictions.php',
+		'community.php',
 		'profile.php',
 		'notifications.php',
 		'moderation.php',
@@ -216,6 +218,33 @@ function notifications_nav_link(bool $active = false): string
 	return '<a class="notification-nav-link' . ($active ? ' active' : '') . '"'
 		. ($active ? ' aria-current="page"' : '')
 		. ' href="notifications.php">' . escape_html($label) . $badge . '</a>';
+}
+
+function community_nav_link(bool $active = false): string
+{
+	$badge = '';
+	if (isset($_SESSION['user_id'])) {
+		require_once __DIR__ . '/database.php';
+		try {
+			$query = database_connection()->prepare(
+				' SELECT COUNT(*) FROM community_notifications
+				 WHERE recipient_user_id = :user_id AND read_at IS NULL'
+			);
+			$query->execute(['user_id' => (int) $_SESSION['user_id']]);
+			$count = (int) $query->fetchColumn();
+			if ($count > 0) {
+				$displayCount = $count > 99 ? '99+' : (string) $count;
+				$badge = '<span class="notification-badge" aria-label="' . escape_html($count . ' new community notifications') . '">'
+					. escape_html($displayCount) . '</span>';
+			}
+		} catch (PDOException $exception) {
+			error_log('WoSo community notification badge database error: ' . $exception->getMessage());
+		}
+	}
+
+	return '<a class="notification-nav-link' . ($active ? ' active' : '') . '"'
+		. ($active ? ' aria-current="page"' : '')
+		. ' href="community.php">Community' . $badge . '</a>';
 }
 
 enforce_account_restrictions();

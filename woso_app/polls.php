@@ -15,7 +15,7 @@ require_once __DIR__ . '/auth.php';
 	<nav class="topnav" aria-label="Main navigation">
 		<a href="home.html">Home</a>
 		<a href="matches.php">Match Center</a>
-		<a href="community.html">Community</a>
+	<?= community_nav_link() ?>
 		<a class="active" aria-current="page" href="polls.php">Polls</a>
 	<a href="predictions.php">Predictions</a>
 	<?= notifications_nav_link() ?>
