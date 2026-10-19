@@ -455,33 +455,45 @@ http_response_code($status);
 					?>
 					<header class="community-thread-heading">
 						<?php if ($activeIsGroup): ?>
-							<span class="community-thread-avatar is-group" aria-hidden="true">G</span>
-						<?php elseif (is_array($directParticipant) && !empty($directParticipant['profile_image_path'])): ?>
-							<img class="community-thread-avatar" src="<?= escape_html((string) $directParticipant['profile_image_path']) ?>" alt="<?= escape_html($activeTitle) ?>'s profile picture">
-						<?php else: ?>
-							<span class="community-thread-avatar" aria-hidden="true"><?= escape_html(strtoupper(substr((string) ($directParticipant['username'] ?? 'D'), 0, 1))) ?></span>
-						<?php endif; ?>
-						<div class="community-thread-details">
-							<p class="home-eyebrow"><?= $activeIsGroup ? 'Group conversation' : 'Private conversation' ?></p>
-							<h2><?= escape_html($activeTitle) ?></h2>
-							<?php if ($activeIsGroup): ?>
-								<div class="community-participant-list" aria-label="Conversation members">
-									<?php foreach ($activeParticipants as $participant): ?>
-										<?php $participantName = (string) (($participant['display_name'] ?? '') ?: $participant['username']); ?>
-										<span class="community-participant">
-											<?php if (!empty($participant['profile_image_path'])): ?>
-												<img src="<?= escape_html((string) $participant['profile_image_path']) ?>" alt="" loading="lazy">
+							<p class="community-thread-type">Group conversation</p>
+							<h2 class="community-group-title"><?= escape_html($activeTitle) ?></h2>
+							<div class="community-participant-list" aria-label="Conversation members">
+								<?php foreach ($activeParticipants as $participant): ?>
+									<div class="post-author-identity community-participant-identity">
+										<a class="post-author-avatar-link" href="home.php?user_id=<?= (int) $participant['user_id'] ?>" aria-label="View @<?= escape_html((string) $participant['username']) ?>'s profile">
+											<?php if (is_string($participant['profile_image_path']) && $participant['profile_image_path'] !== ''): ?>
+												<img class="post-author-avatar" src="<?= escape_html((string) $participant['profile_image_path']) ?>" alt="" loading="lazy">
 											<?php else: ?>
-												<span class="community-participant-placeholder" aria-hidden="true"><?= escape_html(strtoupper(substr((string) $participant['username'], 0, 1))) ?></span>
+												<span class="post-author-avatar post-author-avatar-placeholder" aria-hidden="true"><?= escape_html(strtoupper(substr((string) $participant['username'], 0, 1))) ?></span>
 											<?php endif; ?>
-											<span class="community-participant-name"><?= escape_html($participantName) ?><small>@<?= escape_html((string) $participant['username']) ?></small></span>
+										</a>
+										<span class="post-author-names">
+											<?php if (is_string($participant['display_name']) && $participant['display_name'] !== ''): ?>
+												<span class="post-author-display-name"><?= escape_html((string) $participant['display_name']) ?></span>
+											<?php endif; ?>
+											<a class="profile-link" href="home.php?user_id=<?= (int) $participant['user_id'] ?>">@<?= escape_html((string) $participant['username']) ?></a>
 										</span>
-									<?php endforeach; ?>
-								</div>
-							<?php else: ?>
-								<p>@<?= escape_html((string) ($directParticipant['username'] ?? '')) ?></p>
-							<?php endif; ?>
-						</div>
+									</div>
+								<?php endforeach; ?>
+							</div>
+						<?php else: ?>
+							<p class="community-thread-type">Private conversation</p>
+							<div class="post-author-identity community-contact-identity">
+								<a class="post-author-avatar-link" href="home.php?user_id=<?= (int) $directParticipant['user_id'] ?>" aria-label="View @<?= escape_html((string) $directParticipant['username']) ?>'s profile">
+									<?php if (is_string($directParticipant['profile_image_path']) && $directParticipant['profile_image_path'] !== ''): ?>
+										<img class="post-author-avatar" src="<?= escape_html((string) $directParticipant['profile_image_path']) ?>" alt="" loading="lazy">
+									<?php else: ?>
+										<span class="post-author-avatar post-author-avatar-placeholder" aria-hidden="true"><?= escape_html(strtoupper(substr((string) $directParticipant['username'], 0, 1))) ?></span>
+									<?php endif; ?>
+								</a>
+								<span class="post-author-names">
+									<?php if (is_string($directParticipant['display_name']) && $directParticipant['display_name'] !== ''): ?>
+										<span class="post-author-display-name"><?= escape_html((string) $directParticipant['display_name']) ?></span>
+									<?php endif; ?>
+									<a class="profile-link" href="home.php?user_id=<?= (int) $directParticipant['user_id'] ?>">@<?= escape_html((string) $directParticipant['username']) ?></a>
+								</span>
+							</div>
+						<?php endif; ?>
 					</header>
 					<div id="community-message-list" class="community-message-list" aria-live="polite" aria-label="Messages">
 						<?php if ($messages === []): ?>
@@ -502,7 +514,7 @@ http_response_code($status);
 						<input type="hidden" name="action" value="send_message">
 						<input type="hidden" name="chat_id" value="<?= $selectedChatId ?>">
 						<label for="message-body">Message</label>
-						<textarea id="message-body" name="body" maxlength="2000" rows="3" placeholder="Write a message…" required></textarea>
+						<textarea id="message-body" name="body" maxlength="2000" rows="1" placeholder="Write a message..." required></textarea>
 						<div class="community-composer-footer">
 							<span>Messages are shared with everyone in this conversation.</span>
 							<button class="auth-button" type="submit">Send message <span aria-hidden="true">&#10148;</span></button>
