@@ -674,23 +674,26 @@ http_response_code($status);
 									</div>
 					<?php if ($isSignedIn && $profileUserId !== (int) $_SESSION['user_id']): ?>
 						<?php if ($isAdministrator): ?>
-							<form class="moderation-action-form user-review-form admin-inline-moderation" action="admin_moderation_action.php" method="post">
-								<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
-								<input type="hidden" name="target_type" value="user">
-								<input type="hidden" name="target_id" value="<?= (int) $profileUserId ?>">
-								<input type="hidden" name="return_to" value="<?= escape_html('home.php?user_id=' . $profileUserId) ?>">
-								<label for="user-action-profile-<?= (int) $profileUserId ?>">Manage user</label>
-								<select id="user-action-profile-<?= (int) $profileUserId ?>" name="review_action">
-									<option value="none">Do nothing</option><option value="temporary_block">Block user temporarily</option><option value="ban_user">Ban user</option>
-								</select>
-								<div class="moderation-block-period" hidden>
-									<label for="days-profile-<?= (int) $profileUserId ?>">Block length</label>
-									<select id="days-profile-<?= (int) $profileUserId ?>" name="block_days" disabled>
-										<option value="1">1 day</option><option value="7">7 days</option><option value="30">30 days</option><option value="90">90 days</option><option value="365">365 days</option>
+							<details class="admin-inline-moderation">
+								<summary>Manage user</summary>
+								<form class="moderation-action-form user-review-form" action="admin_moderation_action.php" method="post">
+									<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
+									<input type="hidden" name="target_type" value="user">
+									<input type="hidden" name="target_id" value="<?= (int) $profileUserId ?>">
+									<input type="hidden" name="return_to" value="<?= escape_html('home.php?user_id=' . $profileUserId) ?>">
+									<label for="user-action-profile-<?= (int) $profileUserId ?>">Decision</label>
+									<select id="user-action-profile-<?= (int) $profileUserId ?>" name="review_action">
+										<option value="none">Do nothing</option><option value="temporary_block">Block user temporarily</option><option value="ban_user">Ban user</option>
 									</select>
-								</div>
-								<button class="auth-button" type="submit">Save user decision</button>
-							</form>
+									<div class="moderation-block-period" hidden>
+										<label for="days-profile-<?= (int) $profileUserId ?>">Block length</label>
+										<select id="days-profile-<?= (int) $profileUserId ?>" name="block_days" disabled>
+											<option value="1">1 day</option><option value="7">7 days</option><option value="30">30 days</option><option value="90">90 days</option><option value="365">365 days</option>
+										</select>
+									</div>
+									<button class="auth-button" type="submit">Save user decision</button>
+								</form>
+							</details>
 						<?php else: ?>
 							<form class="report-form report-profile-form" action="report_action.php" method="post">
 								<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
@@ -882,17 +885,20 @@ http_response_code($status);
 							</header>
 			<?php if ($isSignedIn && (int) $post['user_id'] !== (int) $_SESSION['user_id']): ?>
 				<?php if ($isAdministrator): ?>
-					<form class="moderation-action-form post-review-form admin-inline-moderation" action="admin_moderation_action.php" method="post">
-						<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
-						<input type="hidden" name="target_type" value="post">
-						<input type="hidden" name="target_id" value="<?= $postId ?>">
-						<input type="hidden" name="return_to" value="<?= escape_html($postViewRequested ? 'home.php?post_id=' . $postId : 'home.php' . $profileRedirect) ?>">
-						<label for="post-action-inline-<?= $postId ?>">Manage post</label>
-						<select id="post-action-inline-<?= $postId ?>" name="review_action">
-							<option value="none">Do nothing</option><option value="delete_post">Delete post</option>
-						</select>
-						<button class="auth-button" type="submit">Save post decision</button>
-					</form>
+					<details class="admin-inline-moderation">
+						<summary>Manage post</summary>
+						<form class="moderation-action-form post-review-form" action="admin_moderation_action.php" method="post">
+							<input type="hidden" name="csrf_token" value="<?= escape_html(csrf_token()) ?>">
+							<input type="hidden" name="target_type" value="post">
+							<input type="hidden" name="target_id" value="<?= $postId ?>">
+							<input type="hidden" name="return_to" value="<?= escape_html($postViewRequested ? 'home.php?post_id=' . $postId : 'home.php' . $profileRedirect) ?>">
+							<label for="post-action-inline-<?= $postId ?>">Decision</label>
+							<select id="post-action-inline-<?= $postId ?>" name="review_action">
+								<option value="none">Do nothing</option><option value="delete_post">Delete post</option>
+							</select>
+							<button class="auth-button" type="submit">Save post decision</button>
+						</form>
+					</details>
 				<?php else: ?>
 					<details class="report-details">
 						<summary>Report post</summary>
